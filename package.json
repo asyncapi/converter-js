@@ -1,0 +1,26 @@
+{
+  "name": "asyncapi-converter",
+  "version": "0.1.0",
+  "description": "Convert AsyncAPI documents from older to newer versions.",
+  "bin": {
+    "asyncapi-converter": "cli.js"
+  },
+  "main": "lib/index.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "keywords": [
+    "asyncapi",
+    "upgrade",
+    "version",
+    "convert"
+  ],
+  "author": "Fran Mendez <fmvilas@gmail.com> (fmvilas.com)",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "commander": "^2.20.0",
+    "js-yaml": "^3.13.1",
+    "lodash": "^4.17.11",
+    "mocha": "^6.1.4"
+  }
+}
