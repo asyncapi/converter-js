@@ -5,7 +5,7 @@ Convert [AsyncAPI](https://asyncapi.com) documents from version 1.x to 2.0.0-rc1
 ## Installation
 
 ```sh
-npm i asyncapi-converter
+npm i -g asyncapi-converter
 ```
 
 ## Usage
