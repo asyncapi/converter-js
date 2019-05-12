@@ -58,4 +58,4 @@ try {
 
 ## Known missing features
 
-* Streaming APIs (those using `stream` instead of `topics` or `events`) are coverted correctly but information about framing type and delimiter is missing until a [protocolInfo](https://github.com/asyncapi/extensions-catalog/issues/1) for that purpose is created.
+* Streaming APIs (those using `stream` instead of `topics` or `events`) are converted correctly but information about framing type and delimiter is missing until a [protocolInfo](https://github.com/asyncapi/extensions-catalog/issues/1) for that purpose is created.
