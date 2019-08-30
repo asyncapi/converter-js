@@ -32,7 +32,7 @@ if (!asyncapiFile) {
   program.help(); // This exits the process
 }
 if (!version) {
-  version = '2.0.0-rc1';
+  version = '2.0.0';
 }
 
 try {
