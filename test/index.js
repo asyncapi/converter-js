@@ -73,4 +73,11 @@ describe('#convert', () => {
         const result = convert(input, '2.0.0-rc2');
         assert.strictEqual(output, result);
     });
+
+    it('should convert from 2.0.0-rc2 to 2.0.0', () => {
+        const input = fs.readFileSync(path.resolve(__dirname, 'input', '2.0.0-rc2', 'streetlights.yml'), 'utf8');
+        const output = fs.readFileSync(path.resolve(__dirname, 'output', '2.0.0', 'streetlights.yml'), 'utf8');
+        const result = convert(input, '2.0.0');
+        assert.strictEqual(output, result);
+    });
 });

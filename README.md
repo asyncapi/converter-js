@@ -18,7 +18,7 @@ Minimal example:
 asyncapi-converter streetlights.yml
 
 # Result:
-asyncapi: '2.0.0-rc2'
+asyncapi: '2.0.0'
 channels:
 ...
 ```
@@ -29,7 +29,7 @@ Specify the application id:
 asyncapi-converter --id=urn:com.asynapi.streetlights streetlights.yml
 
 # Result:
-asyncapi: '2.0.0-rc2'
+asyncapi: '2.0.0'
 id: 'urn:com.asynapi.streetlights'
 ...
 ```
