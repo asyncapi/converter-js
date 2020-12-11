@@ -7,7 +7,10 @@
   },
   "main": "lib/index.js",
   "scripts": {
-    "test": "mocha"
+    "test": "mocha",
+    "lint": "echo 'no linter configured yet'",
+    "get-version": "echo $npm_package_version",
+    "get-name": "echo $npm_package_name"
   },
   "keywords": [
     "asyncapi",
