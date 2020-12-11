@@ -1,29 +1,70 @@
 {
-  "name": "asyncapi-converter",
-  "version": "0.4.2",
-  "description": "Convert AsyncAPI documents from older to newer versions.",
-  "bin": {
-    "asyncapi-converter": "cli.js"
-  },
-  "main": "lib/index.js",
-  "scripts": {
-    "test": "mocha",
-    "lint": "echo 'no linter configured yet'",
-    "get-version": "echo $npm_package_version",
-    "get-name": "echo $npm_package_name"
-  },
-  "keywords": [
-    "asyncapi",
-    "upgrade",
-    "version",
-    "convert"
-  ],
-  "author": "Fran Mendez <fmvilas@gmail.com> (fmvilas.com)",
-  "license": "Apache-2.0",
-  "dependencies": {
-    "commander": "^2.20.0",
-    "js-yaml": "^3.13.1",
-    "lodash": "^4.17.15",
-    "mocha": "^6.1.4"
-  }
+	"name": "@asyncapi/converter",
+	"version": "0.4.2",
+	"description": "Convert AsyncAPI documents from older to newer versions.",
+	"bin": {
+		"asyncapi-converter": "cli.js"
+	},
+	"main": "lib/index.js",
+	"scripts": {
+		"test": "mocha",
+		"lint": "echo 'no linter configured yet'",
+		"release": "semantic-release",
+		"get-version": "echo $npm_package_version",
+		"get-name": "echo $npm_package_name"
+	},
+	"keywords": [
+		"asyncapi",
+		"upgrade",
+		"version",
+		"convert"
+	],
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/asyncapi/converter-js.git"
+	},
+	"bugs": {
+		"url": "https://github.com/asyncapi/converter-js/issues"
+	},
+	"homepage": "https://github.com/asyncapi/converter-js#readme",
+	"publishConfig": {
+		"access": "public"
+	},
+	"author": "Fran Mendez <fmvilas@gmail.com> (fmvilas.com)",
+	"license": "Apache-2.0",
+	"dependencies": {
+		"commander": "^2.20.0",
+		"js-yaml": "^3.13.1",
+		"lodash": "^4.17.15",
+		"mocha": "^6.1.4"
+	},
+	"devDependencies": {
+		"@semantic-release/commit-analyzer": "^8.0.1",
+		"@semantic-release/github": "^7.0.4",
+		"@semantic-release/npm": "^7.0.3",
+		"@semantic-release/release-notes-generator": "^9.0.1",
+		"conventional-changelog-conventionalcommits": "^4.2.3",
+		"semantic-release": "^17.0.4"
+	},
+	"release": {
+		"branches": [
+			"master"
+		],
+		"plugins": [
+			[
+				"@semantic-release/commit-analyzer",
+				{
+					"preset": "conventionalcommits"
+				}
+			],
+			[
+				"@semantic-release/release-notes-generator",
+				{
+					"preset": "conventionalcommits"
+				}
+			],
+			"@semantic-release/npm",
+			"@semantic-release/github"
+		]
+	}
 }
