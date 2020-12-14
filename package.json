@@ -1,6 +1,6 @@
 {
 	"name": "@asyncapi/converter",
-	"version": "0.4.2",
+	"version": "0.4.3",
 	"description": "Convert AsyncAPI documents from older to newer versions.",
 	"bin": {
 		"asyncapi-converter": "cli.js"
