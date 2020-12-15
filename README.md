@@ -5,7 +5,7 @@ Convert [AsyncAPI](https://asyncapi.com) documents older to newer versions.
 ## Installation
 
 ```sh
-npm i -g asyncapi-converter
+npm i -g @asyncapi/converter
 ```
 
 ## Usage
@@ -43,7 +43,7 @@ asyncapi-converter streetlights.yml > streetlights2.yml
 ### As a package
 
 ```js
-const { convert } = require('asyncapi-converter')
+const { convert } = require('@asyncapi/converter')
 
 try {
   const asyncapi = fs.readFileSync('streetlights.yml', 'utf-8')
