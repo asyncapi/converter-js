@@ -125,7 +125,8 @@ components:
       payload:
         type: string
         enum:
-          - "\r\n"
+          - |+
+
 id: 'urn:gitter.streaming.api'
 channels:
   /:

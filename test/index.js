@@ -8,56 +8,56 @@ describe('#convert', () => {
         const input = fs.readFileSync(path.resolve(__dirname, 'input', '1.0.0', 'streetlights.yml'), 'utf8');
         const output = fs.readFileSync(path.resolve(__dirname, 'output', '2.0.0-rc1', 'streetlights.yml'), 'utf8');
         const result = convert(input, '2.0.0-rc1');
-        assert.strictEqual(output, result);
+        assert.strictEqual(output, switchToUnixLinebreaks(result));
     });
     
     it('should convert from 1.1.0 to 2.0.0-rc1', () => {
         const input = fs.readFileSync(path.resolve(__dirname, 'input', '1.1.0', 'streetlights.yml'), 'utf8');
         const output = fs.readFileSync(path.resolve(__dirname, 'output', '2.0.0-rc1', 'streetlights.yml'), 'utf8');
         const result = convert(input, '2.0.0-rc1');
-        assert.strictEqual(output, result);
+        assert.strictEqual(output, switchToUnixLinebreaks(result));
     });
     
     it('should convert from 1.2.0 to 2.0.0-rc1', () => {
         const input = fs.readFileSync(path.resolve(__dirname, 'input', '1.2.0', 'streetlights.yml'), 'utf8');
         const output = fs.readFileSync(path.resolve(__dirname, 'output', '2.0.0-rc1', 'streetlights.yml'), 'utf8');
         const result = convert(input, '2.0.0-rc1');
-        assert.strictEqual(output, result);
+        assert.strictEqual(output, switchToUnixLinebreaks(result));
     });
     
     it('should convert from 1.2.0 to 2.0.0-rc1 - stream', () => {
         const input = fs.readFileSync(path.resolve(__dirname, 'input', '1.2.0', 'gitter-streaming.yml'), 'utf8');
         const output = fs.readFileSync(path.resolve(__dirname, 'output', '2.0.0-rc1', 'gitter-streaming.yml'), 'utf8');
         const result = convert(input, '2.0.0-rc1');
-        assert.strictEqual(output, result);
+        assert.strictEqual(output, switchToUnixLinebreaks(result));
     });
     
     it('should convert from 1.2.0 to 2.0.0-rc1 - events', () => {
         const input = fs.readFileSync(path.resolve(__dirname, 'input', '1.2.0', 'slack-rtm.yml'), 'utf8');
         const output = fs.readFileSync(path.resolve(__dirname, 'output', '2.0.0-rc1', 'slack-rtm.yml'), 'utf8');
         const result = convert(input, '2.0.0-rc1');
-        assert.strictEqual(output, result);
+        assert.strictEqual(output, switchToUnixLinebreaks(result));
     });
     
     it('should convert from 1.0.0 to 2.0.0-rc2', () => {
         const input = fs.readFileSync(path.resolve(__dirname, 'input', '1.0.0', 'streetlights.yml'), 'utf8');
         const output = fs.readFileSync(path.resolve(__dirname, 'output', '2.0.0-rc2', 'streetlights.yml'), 'utf8');
         const result = convert(input, '2.0.0-rc2');
-        assert.strictEqual(output, result);
+        assert.strictEqual(output, switchToUnixLinebreaks(result));
     });
     
     it('should convert from 1.1.0 to 2.0.0-rc2', () => {
         const input = fs.readFileSync(path.resolve(__dirname, 'input', '1.1.0', 'streetlights.yml'), 'utf8');
         const output = fs.readFileSync(path.resolve(__dirname, 'output', '2.0.0-rc2', 'streetlights.yml'), 'utf8');
         const result = convert(input, '2.0.0-rc2');
-        assert.strictEqual(output, result);
+        assert.strictEqual(output, switchToUnixLinebreaks(result));
     });
     
     it('should convert from 1.2.0 to 2.0.0-rc2 - stream', () => {
         const input = fs.readFileSync(path.resolve(__dirname, 'input', '1.2.0', 'gitter-streaming.yml'), 'utf8');
         const output = fs.readFileSync(path.resolve(__dirname, 'output', '2.0.0-rc2', 'gitter-streaming.yml'), 'utf8');
         const result = convert(input, '2.0.0-rc2');
-        assert.strictEqual(output, result);
+        assert.strictEqual(output, switchToUnixLinebreaks(result));
     });
     
     it('should convert from 1.2.0 to 2.0.0-rc2 - events', () => {
@@ -109,3 +109,11 @@ describe('#convert', () => {
         assert.strictEqual(output, result);
     });
 });
+
+/*
+  It is a helper required for testing on windows. It can't be solved by editor configuration and the end line setting because expected result is converted during tests.
+  We need to remove `\r` from files converted on windows.
+*/
+function switchToUnixLinebreaks(str) {
+    return str.replace(/\\r/g, "")
+  }
