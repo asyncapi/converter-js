@@ -126,7 +126,8 @@ components:
       payload:
         type: string
         enum:
-          - "\r\n"
+          - |+
+          
 channels:
   /:
     publish:
