@@ -8,6 +8,9 @@ describe('#convert', () => {
         const input = fs.readFileSync(path.resolve(__dirname, 'input', '1.0.0', 'streetlights.yml'), 'utf8');
         const output = fs.readFileSync(path.resolve(__dirname, 'output', '2.0.0-rc1', 'streetlights.yml'), 'utf8');
         const result = convert(input, '2.0.0-rc1');
+        console.log('output', output)
+        console.log('switchToUnixLinebreaks(output)', switchToUnixLinebreaks(output))
+        console.log('result', result)
         assert.strictEqual(switchToUnixLinebreaks(output), result);
     });
     
