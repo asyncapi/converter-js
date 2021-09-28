@@ -165,6 +165,20 @@ describe('#convert', () => {
         const result = convert(input, '2.1.0');
         assertResults(output, result);
     });
+
+    it('should convert from 2.0.0 to 2.2.0', () => {
+        const input = fs.readFileSync(path.resolve(__dirname, 'input', '2.0.0', 'streetlights.yml'), 'utf8');
+        const output = fs.readFileSync(path.resolve(__dirname, 'output', '2.2.0', 'streetlights.yml'), 'utf8');
+        const result = convert(input, '2.2.0');
+        assertResults(output, result);
+    });
+
+    it('should convert from 2.1.0 to 2.2.0', () => {
+        const input = fs.readFileSync(path.resolve(__dirname, 'input', '2.1.0', 'streetlights.yml'), 'utf8');
+        const output = fs.readFileSync(path.resolve(__dirname, 'output', '2.2.0', 'streetlights.yml'), 'utf8');
+        const result = convert(input, '2.2.0');
+        assertResults(output, result);
+    });
 });
 
 /*
