@@ -41,6 +41,7 @@ try {
     id: program.id,
   });
 
+  // JSON case
   if (typeof converted === 'object') {
     converted = JSON.stringify(converted, undefined, 2);
   }
