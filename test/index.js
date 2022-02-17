@@ -5,18 +5,24 @@ const { convert } = require('../lib');
 
 describe('#convert', () => {
     it('should not convert to lowest version', () => {
-        const result = convert(`asyncapi: '2.1.0'`, '2.0.0');
-        assert.strictEqual(result, undefined);
+        assert.throws(
+            () => convert(`asyncapi: '2.1.0'`, '2.0.0'),
+            /^Error: Cannot downgrade from 2.1.0 to 2.0.0.$/
+        );
     });
 
     it('should not convert from non existing version', () => {
-        const result = convert(`asyncapi: '2.0.0-rc3'`, '2.1.0');
-        assert.strictEqual(result, undefined);
+        assert.throws(
+            () => convert(`asyncapi: '2.0.0-rc3'`, '2.1.0'),
+            /^Error: Cannot convert from 2.0.0-rc3 to 2.1.0.$/
+        );
     });
 
     it('should not convert to this same version', () => {
-        const result = convert(`asyncapi: '2.1.0'`, '2.1.0');
-        assert.strictEqual(result, undefined);
+        assert.throws(
+            () => convert(`asyncapi: '2.1.0'`, '2.1.0'),
+            /^Error: Cannot convert to the same version.$/
+        );
     });
 
     it('should convert from 1.0.0 to 2.0.0-rc1', () => {
