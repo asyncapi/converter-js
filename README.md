@@ -34,10 +34,16 @@ id: 'urn:com.asynapi.streetlights'
 ...
 ```
 
-Save the result in a file:
+Save the result in a file by stream:
 
 ```sh
 asyncapi-converter streetlights.yml > streetlights2.yml
+```
+
+Save the result in a file by `-o, --output` flag:
+
+```sh
+asyncapi-converter streetlights.yml -o streetlights2.yml
 ```
 
 ### As a package
