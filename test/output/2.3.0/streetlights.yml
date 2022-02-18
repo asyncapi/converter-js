@@ -78,7 +78,6 @@ components:
       description: Provide your API key as the user and leave the password empty.
   parameters:
     streetlightId:
-      name: streetlightId
       description: The ID of the streetlight.
       schema:
         type: string
