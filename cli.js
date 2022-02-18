@@ -37,9 +37,16 @@ if (!version) {
 
 try {
   const asyncapi = fs.readFileSync(asyncapiFile, 'utf-8');
-  console.log(converter.convert(asyncapi, version, {
+  let converted = converter.convert(asyncapi, version, {
     id: program.id,
-  }));
+  });
+
+  // JSON case
+  if (typeof converted === 'object') {
+    converted = JSON.stringify(converted, undefined, 2);
+  }
+
+  console.log(converted);
 } catch (e) {
   showErrorAndExit(e);
 }
