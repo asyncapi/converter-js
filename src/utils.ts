@@ -3,7 +3,7 @@ import { load } from 'js-yaml';
 import type { AsyncAPIDocument } from "./interfaces";
 
 export function serializeInput(document: string | AsyncAPIDocument): { format: 'json' | 'yaml', document: AsyncAPIDocument } | never {
-  let tryingConvertToYaml = false;
+  let triedConvertToYaml = false;
   try {
     if (typeof document === 'object') {
       return {
@@ -20,7 +20,7 @@ export function serializeInput(document: string | AsyncAPIDocument): { format: '
       };
     }
 
-    tryingConvertToYaml = true;
+    triedConvertToYaml = true; // NOSONAR
     // if `maybeJSON` is object, then we have 100% sure that we operate on JSON, 
     // but if it's `string` then we have option that it can be YAML but it doesn't have to be
     return {
@@ -29,7 +29,7 @@ export function serializeInput(document: string | AsyncAPIDocument): { format: '
     };
   } catch (e) {
     try {
-      if (tryingConvertToYaml) {
+      if (triedConvertToYaml) {
         throw e;
       }
 
@@ -42,7 +42,7 @@ export function serializeInput(document: string | AsyncAPIDocument): { format: '
       throw new Error('AsyncAPI document must be a valid JSON or YAML document.');
     }
   }
-};
+}
 
 export function eventToChannel(event: any) {
   const out: { publish: any, subscribe: any } = {} as any;
@@ -61,7 +61,7 @@ export function eventToChannel(event: any) {
     }
   }
   return out;
-};
+}
 
 export function streamToChannel(stream: any) {
   const out: { publish: any, subscribe: any } = {} as any;
@@ -80,11 +80,11 @@ export function streamToChannel(stream: any) {
     }
   }
   return out;
-};
+}
 
 export function objectToSchema(obj: Record<string, unknown>) {
   return { type: 'object', properties: { ...obj } };
-};
+}
 
 export function dotsToSlashes(topic: string) {
   return topic.replace(/\./g, '/');

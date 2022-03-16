@@ -145,7 +145,7 @@ function from__2_0_0_rc1__to__2_0_0_rc2(asyncapi: AsyncAPIDocument) { // NOSONAR
   }
 
   if (asyncapi.channels) {
-    Object.entries(asyncapi.channels as Record<string, any>).map(([channelName, channel]) => {
+    Object.entries(asyncapi.channels as Record<string, any>).forEach(([channelName, channel]) => {
       if (channel.parameters) {
         const parametersMap: Record<string, any> = {};
         const paramNames = (channelName.match(/\{([^\}]{1,100})\}/g) as string[]).map(p => p.substr(1, p.length - 2));
@@ -185,7 +185,7 @@ function from__2_0_0_rc1__to__2_0_0_rc2(asyncapi: AsyncAPIDocument) { // NOSONAR
   }
 
   if (asyncapi.components && asyncapi.components.parameters) {
-    Object.values(asyncapi.components.parameters).map((parameter: any) => {
+    Object.values(asyncapi.components.parameters).forEach((parameter: any) => {
       if (parameter.name) delete parameter.name;
     });
   }

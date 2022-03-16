@@ -36,8 +36,7 @@
 	"license": "Apache-2.0",
 	"dependencies": {
 		"commander": "^8.3.0",
-		"js-yaml": "^3.14.1",
-		"lodash": "^4.17.21"
+		"js-yaml": "^3.14.1"
 	},
 	"devDependencies": {
 		"@jest/types": "^27.5.1",
