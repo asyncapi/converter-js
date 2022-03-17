@@ -15,6 +15,8 @@ Convert [AsyncAPI](https://asyncapi.com) documents older to newer versions.
   * [From CLI](#from-cli)
   * [As a package](#as-a-package)
 - [Known missing features](#known-missing-features)
+- [Development](#development)
+- [Contribution](#contribution)
 - [Contributors ✨](#contributors-%E2%9C%A8)
 
 <!-- tocstop -->
