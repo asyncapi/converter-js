@@ -75,7 +75,7 @@ function from__1_1_0__to__1_2_0(asyncapi: AsyncAPIDocument, _: ConvertOptions) {
 
 function from__1_2_0__to__2_0_0_rc1(asyncapi: AsyncAPIDocument, options: ConvertOptions) { // NOSONAR
   asyncapi.asyncapi = '2.0.0-rc1';
-  asyncapi.id = options.id || `urn:${asyncapi.info.title.toLowerCase().split(' ').join('.')}`;
+  asyncapi.id = options.id || `urn:${asyncapi.info.title.toLowerCase().split(' ').join('.')}`; // NOSONAR
 
   if (asyncapi.servers) {
     const security = asyncapi.security;
