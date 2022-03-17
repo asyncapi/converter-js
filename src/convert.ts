@@ -13,7 +13,7 @@ import type { AsyncAPIDocument, ConvertVersion, ConvertOptions } from './interfa
 /**
  * Value for key (version) represents the function which converts specification from previous version to the given as key.
  */
- const conversions: Record<string, (asyncapi: AsyncAPIDocument) => AsyncAPIDocument> = {
+ const conversions: Record<string, (asyncapi: AsyncAPIDocument, options: ConvertOptions) => AsyncAPIDocument> = {
   '1.0.0': from__undefined__to__1_0_0,
   '1.1.0': from__1_0_0__to__1_1_0,
   '1.2.0': from__1_1_0__to__1_2_0,
@@ -49,7 +49,7 @@ export function convert(asyncapi: string | AsyncAPIDocument, version: ConvertVer
   fromVersion++;
   let converted = document;
   for (let i = fromVersion; i <= toVersion; i++) {
-    converted = conversions[conversionVersions[i]](converted);
+    converted = conversions[conversionVersions[i]](converted, options);
   }
 
   if (format === 'yaml') {
@@ -58,25 +58,24 @@ export function convert(asyncapi: string | AsyncAPIDocument, version: ConvertVer
   return converted;
 }
 
-function from__undefined__to__1_0_0(asyncapi: AsyncAPIDocument) {
+function from__undefined__to__1_0_0(asyncapi: AsyncAPIDocument, _: ConvertOptions) {
   asyncapi.asyncapi = '1.0.0';
   return asyncapi;
 }
 
-function from__1_0_0__to__1_1_0(asyncapi: AsyncAPIDocument) {
+function from__1_0_0__to__1_1_0(asyncapi: AsyncAPIDocument, _: ConvertOptions) {
   asyncapi.asyncapi = '1.1.0';
   return asyncapi;
 }
 
-function from__1_1_0__to__1_2_0(asyncapi: AsyncAPIDocument) {
+function from__1_1_0__to__1_2_0(asyncapi: AsyncAPIDocument, _: ConvertOptions) {
   asyncapi.asyncapi = '1.2.0';
   return asyncapi;
 }
 
-function from__1_2_0__to__2_0_0_rc1(asyncapi: AsyncAPIDocument) { // NOSONAR
+function from__1_2_0__to__2_0_0_rc1(asyncapi: AsyncAPIDocument, options: ConvertOptions) { // NOSONAR
   asyncapi.asyncapi = '2.0.0-rc1';
-
-  asyncapi.id = `urn:${asyncapi.info.title.toLowerCase().split(' ').join('.')}`;
+  asyncapi.id = options.id || `urn:${asyncapi.info.title.toLowerCase().split(' ').join('.')}`;
 
   if (asyncapi.servers) {
     const security = asyncapi.security;
@@ -131,8 +130,9 @@ function from__1_2_0__to__2_0_0_rc1(asyncapi: AsyncAPIDocument) { // NOSONAR
   return asyncapi;
 }
 
-function from__2_0_0_rc1__to__2_0_0_rc2(asyncapi: AsyncAPIDocument) { // NOSONAR
+function from__2_0_0_rc1__to__2_0_0_rc2(asyncapi: AsyncAPIDocument, options: ConvertOptions) { // NOSONAR
   asyncapi.asyncapi = '2.0.0-rc2';
+  asyncapi.id = asyncapi.id || options.id;
 
   if (asyncapi.servers) {
     const serverMap: Record<string, any> = {};
@@ -190,27 +190,27 @@ function from__2_0_0_rc1__to__2_0_0_rc2(asyncapi: AsyncAPIDocument) { // NOSONAR
     });
   }
 
-  delete asyncapi.id;
-
+  if (!options.id) delete asyncapi.id;
   return asyncapi;
 }
 
-function from__2_0_0_rc2__to__2_0_0(asyncapi: AsyncAPIDocument) {
+function from__2_0_0_rc2__to__2_0_0(asyncapi: AsyncAPIDocument, options: ConvertOptions) {
   asyncapi.asyncapi = '2.0.0';
+  if (!options.id) delete asyncapi.id;
   return asyncapi;
 }
 
-function from__2_0_0__to__2_1_0(asyncapi: AsyncAPIDocument) {
+function from__2_0_0__to__2_1_0(asyncapi: AsyncAPIDocument, _: ConvertOptions) {
   asyncapi.asyncapi = '2.1.0';
   return asyncapi;
 }
 
-function from__2_1_0__to__2_2_0(asyncapi: AsyncAPIDocument) {
+function from__2_1_0__to__2_2_0(asyncapi: AsyncAPIDocument, _: ConvertOptions) {
   asyncapi.asyncapi = '2.2.0';
   return asyncapi;
 }
 
-function from__2_2_0__to__2_3_0(asyncapi: AsyncAPIDocument) {
+function from__2_2_0__to__2_3_0(asyncapi: AsyncAPIDocument, _: ConvertOptions) {
   asyncapi.asyncapi = '2.3.0';
   return asyncapi;
 }
