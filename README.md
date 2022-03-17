@@ -46,16 +46,36 @@ Save the result in a file by `-o, --output` flag:
 asyncapi-converter streetlights.yml -o streetlights2.yml
 ```
 
-### As a package
+### In JS
 
 ```js
+const fs = require('fs');
 const { convert } = require('@asyncapi/converter')
 
 try {
   const asyncapi = fs.readFileSync('streetlights.yml', 'utf-8')
   console.log(convert(asyncapi, '2.0.0', {
-      id: 'urn:com.asyncapi.streetlights'
-  }))
+    id: 'urn:com.asyncapi.streetlights'
+  }));
+} catch (e) {
+  console.error(e);
+}
+```
+
+### In TS
+
+```ts
+import { convert } from '@asyncapi/converter';
+import type { ConvertVersion, ConvertOptions } from '@asyncapi/converter';
+
+try {
+  const toVersion: ConvertVersion = '2.0.0';
+  const options: ConvertOptions = {
+    id: 'urn:com.asyncapi.streetlights'
+  };
+
+  const asyncapi = fs.readFileSync('streetlights.yml', 'utf-8')
+  console.log(convert(asyncapi, toVersion, options));
 } catch (e) {
   console.error(e)
 }

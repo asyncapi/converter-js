@@ -13,7 +13,8 @@
 		"lint": "echo 'no linter configured yet'",
 		"release": "semantic-release",
 		"generate:assets": "echo 'No additional assets need to be generated at the moment'",
-		"bump:version": "npm --no-git-tag-version --allow-same-version version $VERSION"
+		"bump:version": "npm --no-git-tag-version --allow-same-version version $VERSION",
+		"prepublishOnly": "npm run build"
 	},
 	"keywords": [
 		"asyncapi",
@@ -21,6 +22,12 @@
 		"version",
 		"convert"
 	],
+	"files": [
+    "/lib",
+		"cli.js",
+    "./README.md",
+    "./LICENSE"
+  ],
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/asyncapi/converter-js.git"
