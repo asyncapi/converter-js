@@ -102,6 +102,16 @@ try {
 
 * When converting from 1.x to 2.x, Streaming APIs (those using `stream` instead of `topics` or `events`) are converted correctly but information about framing type and delimiter is missing until a [protocolInfo](https://github.com/asyncapi/extensions-catalog/issues/1) for that purpose is created.
 
+## Development
+
+1. Setup project by installing dependencies `npm install`
+2. Write code and tests.
+3. Make sure all tests pass `npm test`
+
+## Contribution
+
+Read [CONTRIBUTING](https://github.com/asyncapi/.github/blob/master/CONTRIBUTING.md) guide.
+
 ## Contributors ✨
 
 Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
