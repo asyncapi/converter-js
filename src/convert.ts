@@ -75,7 +75,7 @@ function from__1_1_0__to__1_2_0(asyncapi: AsyncAPIDocument, _: ConvertOptions) {
 
 function from__1_2_0__to__2_0_0_rc1(asyncapi: AsyncAPIDocument, options: ConvertOptions) { // NOSONAR
   asyncapi.asyncapi = '2.0.0-rc1';
-  asyncapi.id = options.id || `urn:${asyncapi.info.title.toLowerCase().split(' ').join('.')}`; // NOSONAR
+  asyncapi.id = options.id || `urn:${asyncapi.info.title.toLowerCase().split(' ').join('.')}`;
 
   if (asyncapi.servers) {
     const security = asyncapi.security;
@@ -148,7 +148,7 @@ function from__2_0_0_rc1__to__2_0_0_rc2(asyncapi: AsyncAPIDocument, options: Con
     Object.entries(asyncapi.channels as Record<string, any>).forEach(([channelName, channel]) => {
       if (channel.parameters) {
         const parametersMap: Record<string, any> = {};
-        const paramNames = (channelName.match(/\{([^\}]{1,100})\}/g) as string[]).map(p => p.substr(1, p.length - 2));
+        const paramNames = (channelName.match(/\{([^\}]{1,100})\}/g) as string[]).map(p => p.substr(1, p.length - 2)); // NOSONAR
         channel.parameters.forEach((parameter: any, index: number) => {
           const name = parameter.name || paramNames[index];
           if (parameter.name) delete parameter.name;
