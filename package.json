@@ -1,6 +1,6 @@
 {
 	"name": "@asyncapi/converter",
-	"version": "0.9.0",
+	"version": "0.10.0",
 	"description": "Convert AsyncAPI documents from older to newer versions.",
 	"bin": {
 		"asyncapi-converter": "cli.js"
@@ -23,11 +23,11 @@
 		"convert"
 	],
 	"files": [
-    "/lib",
+		"/lib",
 		"cli.js",
-    "./README.md",
-    "./LICENSE"
-  ],
+		"./README.md",
+		"./LICENSE"
+	],
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/asyncapi/converter-js.git"
