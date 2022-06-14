@@ -1,0 +1,104 @@
+{
+  "projectName": "converter-js",
+  "projectOwner": "asyncapi",
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "files": [
+    "README.md"
+  ],
+  "imageSize": 100,
+  "commit": false,
+  "commitConvention": "none",
+  "contributors": [
+    {
+      "login": "magicmatatjahu",
+      "name": "Maciej Urbańczyk",
+      "avatar_url": "https://avatars.githubusercontent.com/u/20404945?v=4",
+      "profile": "https://github.com/magicmatatjahu",
+      "contributions": [
+        "maintenance",
+        "code",
+        "bug",
+        "review",
+        "test",
+        "doc"
+      ]
+    },
+    {
+      "login": "fmvilas",
+      "name": "Fran Méndez",
+      "avatar_url": "https://avatars.githubusercontent.com/u/242119?v=4",
+      "profile": "http://www.fmvilas.com/",
+      "contributions": [
+        "maintenance",
+        "code",
+        "bug",
+        "review",
+        "test",
+        "doc"
+      ]
+    },
+    {
+      "login": "derberg",
+      "name": "Lukasz Gornicki",
+      "avatar_url": "https://avatars.githubusercontent.com/u/6995927?v=4",
+      "profile": "https://www.brainfart.dev/",
+      "contributions": [
+        "maintenance",
+        "code",
+        "bug",
+        "review",
+        "test",
+        "doc",
+        "infra"
+      ]
+    },
+    {
+      "login": "germanschnyder",
+      "name": "Germán Schnyder",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1844525?v=4",
+      "profile": "https://github.com/germanschnyder",
+      "contributions": [
+        "code",
+        "test"
+      ]
+    },
+    {
+      "login": "bszwarc",
+      "name": "Barbara Czyż",
+      "avatar_url": "https://avatars.githubusercontent.com/u/17266942?v=4",
+      "profile": "https://github.com/bszwarc",
+      "contributions": [
+        "infra"
+      ]
+    },
+    {
+      "login": "depimomo",
+      "name": "depimomo",
+      "avatar_url": "https://avatars.githubusercontent.com/u/12368942?v=4",
+      "profile": "https://github.com/depimomo",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "crypto-cmd",
+      "name": "Orville Daley",
+      "avatar_url": "https://avatars.githubusercontent.com/u/54287503?v=4",
+      "profile": "https://github.com/crypto-cmd",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "sundbry",
+      "name": "Ryan R Sundberg",
+      "avatar_url": "https://avatars.githubusercontent.com/u/549273?v=4",
+      "profile": "https://www.arctype.co/",
+      "contributions": [
+        "code"
+      ]
+    }
+  ],
+  "contributorsPerLine": 7
+}
