@@ -74,9 +74,8 @@ function from__1_1_0__to__1_2_0(asyncapi: AsyncAPIDocument, _: ConvertOptions) {
   return asyncapi;
 }
 
-function from__1_2_0__to__2_0_0_rc1(asyncapi: AsyncAPIDocument, options: ConvertOptions) { // NOSONAR
+function from__1_2_0__to__2_0_0_rc1(asyncapi: AsyncAPIDocument, _: ConvertOptions) { // NOSONAR
   asyncapi.asyncapi = '2.0.0-rc1';
-  asyncapi.id = options.id || `urn:${asyncapi.info.title.toLowerCase().split(' ').join('.')}`;
 
   if (asyncapi.servers) {
     const security = asyncapi.security;
@@ -131,9 +130,8 @@ function from__1_2_0__to__2_0_0_rc1(asyncapi: AsyncAPIDocument, options: Convert
   return asyncapi;
 }
 
-function from__2_0_0_rc1__to__2_0_0_rc2(asyncapi: AsyncAPIDocument, options: ConvertOptions) { // NOSONAR
+function from__2_0_0_rc1__to__2_0_0_rc2(asyncapi: AsyncAPIDocument, _: ConvertOptions) { // NOSONAR
   asyncapi.asyncapi = '2.0.0-rc2';
-  asyncapi.id = asyncapi.id || options.id;
 
   if (asyncapi.servers) {
     const serverMap: Record<string, any> = {};
@@ -191,13 +189,11 @@ function from__2_0_0_rc1__to__2_0_0_rc2(asyncapi: AsyncAPIDocument, options: Con
     });
   }
 
-  if (!options.id) delete asyncapi.id;
   return asyncapi;
 }
 
-function from__2_0_0_rc2__to__2_0_0(asyncapi: AsyncAPIDocument, options: ConvertOptions) {
+function from__2_0_0_rc2__to__2_0_0(asyncapi: AsyncAPIDocument, _: ConvertOptions) {
   asyncapi.asyncapi = '2.0.0';
-  if (!options.id) delete asyncapi.id;
   return asyncapi;
 }
 
