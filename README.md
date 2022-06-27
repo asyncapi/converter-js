@@ -25,17 +25,25 @@ Convert [AsyncAPI](https://asyncapi.com) documents older to newer versions.
 ## Installation
 
 ```sh
-npm i -g @asyncapi/converter
+npm i @asyncapi/converter
 ```
 
 ## Usage
 
 ### From CLI
 
-Minimal example:
+To convert an AsyncAPi document in the console needs the official [AsyncAPI CLI](https://github.com/asyncapi/cli).
+
+If you don't have CLI installed, run this command to install the CLI globally on your system:
 
 ```sh
-asyncapi-converter streetlights.yml
+npm install -g @asyncapi/cli
+```
+
+Minimal usage example with output given:
+
+```sh
+asyncapi convert streetlights.yml -o streetlights2.yml
 
 # Result:
 asyncapi: '2.0.0'
@@ -43,27 +51,15 @@ channels:
 ...
 ```
 
-Specify the application id:
+Convert to specific version:
 
 ```sh
-asyncapi-converter --id=urn:com.asynapi.streetlights streetlights.yml
+asyncapi convert streetlights.yml -o streetlights2.yml -t 2.3.0
 
 # Result:
-asyncapi: '2.0.0'
-id: 'urn:com.asynapi.streetlights'
+asyncapi: '2.3.0'
+channels:
 ...
-```
-
-Save the result in a file by stream:
-
-```sh
-asyncapi-converter streetlights.yml > streetlights2.yml
-```
-
-Save the result in a file by `-o, --output` flag:
-
-```sh
-asyncapi-converter streetlights.yml -o streetlights2.yml
 ```
 
 ### In JS

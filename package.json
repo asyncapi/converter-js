@@ -2,9 +2,6 @@
 	"name": "@asyncapi/converter",
 	"version": "0.11.0",
 	"description": "Convert AsyncAPI documents from older to newer versions.",
-	"bin": {
-		"asyncapi-converter": "cli.js"
-	},
 	"main": "lib/index.js",
 	"types": "lib/index.d.ts",
 	"scripts": {
@@ -25,7 +22,6 @@
 	],
 	"files": [
 		"/lib",
-		"cli.js",
 		"./README.md",
 		"./LICENSE"
 	],
@@ -43,7 +39,6 @@
 	"author": "Fran Mendez <fmvilas@gmail.com> (fmvilas.com)",
 	"license": "Apache-2.0",
 	"dependencies": {
-		"commander": "^8.3.0",
 		"js-yaml": "^3.14.1"
 	},
 	"devDependencies": {

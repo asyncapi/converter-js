@@ -821,7 +821,6 @@ components:
             type: string
           text:
             type: string
-id: 'urn:slack.real.time.messaging.api'
 channels:
   /:
     publish:
