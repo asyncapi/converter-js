@@ -1,3 +1,3 @@
 export { convert } from './convert';
 
-export type { ConvertVersion, ConvertOptions } from './interfaces';
+export type { AsyncAPIDocument, ConvertVersion, ConvertOptions } from './interfaces';

@@ -1,0 +1,234 @@
+import { dotsToSlashes } from './utils';
+
+import type { AsyncAPIDocument, ConvertOptions, ConvertFunction } from './interfaces';
+
+export const converters: Record<string, ConvertFunction> = {
+  '2.0.0-rc1': from__1_2_0__to__2_0_0_rc1,
+  '2.0.0-rc2': from__2_0_0_rc1__to__2_0_0_rc2,
+  '2.0.0': from__2_0_0_rc2__to__2_0_0,
+  '2.1.0': from__2_0_0__to__2_1_0,
+  '2.2.0': from__2_1_0__to__2_2_0,
+  '2.3.0': from__2_2_0__to__2_3_0,
+  '2.4.0': from__2_3_0__to__2_4_0,
+  '2.5.0': from__2_4_0__to__2_5_0,
+  '2.6.0': from__2_5_0__to__2_6_0,
+};
+
+function from__1_2_0__to__2_0_0_rc1(asyncapi: AsyncAPIDocument, _: ConvertOptions): AsyncAPIDocument { // NOSONAR
+  asyncapi.asyncapi = '2.0.0-rc1';
+
+  if (asyncapi.servers) {
+    const security = asyncapi.security;
+    asyncapi.servers = asyncapi.servers.map((server: any) => {
+      const { scheme, schemeVersion, ...rest } = server;
+
+      const out = {
+        ...rest,
+        protocol: scheme
+      };
+      if (schemeVersion) {
+        out.protocolVersion = schemeVersion;
+      }
+      if (security) {
+        out.security = security;
+      }
+
+      return out;
+    });
+  }
+
+  if (asyncapi.topics) {
+    const baseTopic = asyncapi.baseTopic ? `${asyncapi.baseTopic}.` : "";
+    asyncapi.channels = Object.entries(asyncapi.topics as Record<string, any>).reduce((newChannels, [channelName, channel]) => {
+      if (channel.publish) {
+        channel.publish = { message: channel.publish };
+      }
+      if (channel.subscribe) {
+        channel.subscribe = { message: channel.subscribe };
+      }
+      channelName = dotsToSlashes(`${baseTopic}${channelName}`)
+      newChannels[channelName] = channel;
+
+      return newChannels;
+    }, {} as Record<string, any>);
+  } else if (asyncapi.stream) {
+    asyncapi.channels = {
+      '/': streamToChannel(asyncapi.stream),
+    };
+  } else if (asyncapi.events) {
+    asyncapi.channels = {
+      '/': eventToChannel(asyncapi.events),
+    };
+  }
+
+  delete asyncapi.topics;
+  delete asyncapi.stream;
+  delete asyncapi.events;
+  delete asyncapi.baseTopic;
+  delete asyncapi.security;
+
+  return asyncapi;
+}
+
+function from__2_0_0_rc1__to__2_0_0_rc2(asyncapi: AsyncAPIDocument, _: ConvertOptions) { // NOSONAR
+  asyncapi.asyncapi = '2.0.0-rc2';
+
+  if (asyncapi.servers) {
+    const serverMap: Record<string, any> = {};
+    asyncapi.servers.forEach((server: any, index: number) => {
+      if (server.baseChannel) delete server.baseChannel;
+      const name = index === 0 ? 'default' : `server${index}`;
+      serverMap[name] = server;
+    });
+    asyncapi.servers = serverMap;
+  }
+
+  if (asyncapi.channels) {
+    Object.entries(asyncapi.channels as Record<string, any>).forEach(([channelName, channel]) => {
+      if (channel.parameters) {
+        const parametersMap: Record<string, any> = {};
+        const paramNames = (channelName.match(/\{([^\}]{1,100})\}/g) as string[]).map(p => p.substr(1, p.length - 2)); // NOSONAR
+        channel.parameters.forEach((parameter: any, index: number) => {
+          const name = parameter.name || paramNames[index];
+          if (parameter.name) delete parameter.name;
+          parametersMap[name] = parameter;
+        });
+        channel.parameters = parametersMap;
+      }
+
+      if (channel.publish && channel.publish.message) {
+        const message = channel.publish.message;
+        convertMessage(message);
+      }
+
+      if (channel.subscribe && channel.subscribe.message) {
+        const message = channel.subscribe.message;
+        convertMessage(message);
+      }
+
+      if (channel.protocolInfo) {
+        channel.bindings = channel.protocolInfo;
+        delete channel.protocolInfo;
+      }
+
+      if (channel.publish && channel.publish.protocolInfo) {
+        channel.publish.bindings = channel.publish.protocolInfo;
+        delete channel.publish.protocolInfo;
+      }
+
+      if (channel.subscribe && channel.subscribe.protocolInfo) {
+        channel.subscribe.bindings = channel.subscribe.protocolInfo;
+        delete channel.subscribe.protocolInfo;
+      }
+    });
+  }
+
+  if (asyncapi.components && asyncapi.components.parameters) {
+    Object.values(asyncapi.components.parameters).forEach((parameter: any) => {
+      if (parameter.name) delete parameter.name;
+    });
+  }
+
+  return asyncapi;
+}
+
+function from__2_0_0_rc2__to__2_0_0(asyncapi: AsyncAPIDocument, _: ConvertOptions) {
+  asyncapi.asyncapi = '2.0.0';
+  return asyncapi;
+}
+
+function from__2_0_0__to__2_1_0(asyncapi: AsyncAPIDocument, _: ConvertOptions) {
+  asyncapi.asyncapi = '2.1.0';
+  return asyncapi;
+}
+
+function from__2_1_0__to__2_2_0(asyncapi: AsyncAPIDocument, _: ConvertOptions) {
+  asyncapi.asyncapi = '2.2.0';
+  return asyncapi;
+}
+
+function from__2_2_0__to__2_3_0(asyncapi: AsyncAPIDocument, _: ConvertOptions) {
+  asyncapi.asyncapi = '2.3.0';
+  return asyncapi;
+}
+
+function from__2_3_0__to__2_4_0(asyncapi: AsyncAPIDocument, _: ConvertOptions) {
+  asyncapi.asyncapi = '2.4.0';
+  return asyncapi;
+}
+
+function from__2_4_0__to__2_5_0(asyncapi: AsyncAPIDocument, _: ConvertOptions) {
+  asyncapi.asyncapi = '2.5.0';
+  return asyncapi;
+}
+
+function from__2_5_0__to__2_6_0(asyncapi: AsyncAPIDocument, _: ConvertOptions) {
+  asyncapi.asyncapi = '2.6.0';
+  return asyncapi;
+}
+
+function eventToChannel(event: any) {
+  const out: { publish: any, subscribe: any } = {} as any;
+  if (event.receive) {
+    out.publish = {
+      message: {
+        oneOf: event.receive
+      }
+    }
+  }
+  if (event.send) {
+    out.subscribe = {
+      message: {
+        oneOf: event.send
+      }
+    }
+  }
+  return out;
+}
+
+function streamToChannel(stream: any) {
+  const out: { publish: any, subscribe: any } = {} as any;
+  if (stream.read) {
+    out.publish = {
+      message: {
+        oneOf: stream.read
+      }
+    }
+  }
+  if (stream.write) {
+    out.subscribe = {
+      message: {
+        oneOf: stream.write
+      }
+    }
+  }
+  return out;
+}
+
+function convertMessage(message: any) {
+  if (message.oneOf) {
+    message.oneOf.forEach((m: any) => {
+      if (m.protocolInfo) {
+        m.bindings = m.protocolInfo;
+        delete m.protocolInfo;
+      }
+          
+      if (m.headers) {
+        m.headers = objectToSchema(m.headers);
+      }
+    });
+  } else {
+    if (message.protocolInfo) {
+      message.bindings = message.protocolInfo;
+      delete message.protocolInfo;
+    }
+
+    if (message.headers) {
+      message.headers = objectToSchema(message.headers);
+    }
+  }
+}
+
+function objectToSchema(obj: Record<string, unknown>) {
+  return { type: 'object', properties: { ...obj } };
+}

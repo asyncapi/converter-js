@@ -44,44 +44,6 @@ export function serializeInput(document: string | AsyncAPIDocument): { format: '
   }
 }
 
-export function eventToChannel(event: any) {
-  const out: { publish: any, subscribe: any } = {} as any;
-  if (event.receive) {
-    out.publish = {
-      message: {
-        oneOf: event.receive
-      }
-    }
-  }
-  if (event.send) {
-    out.subscribe = {
-      message: {
-        oneOf: event.send
-      }
-    }
-  }
-  return out;
-}
-
-export function streamToChannel(stream: any) {
-  const out: { publish: any, subscribe: any } = {} as any;
-  if (stream.read) {
-    out.publish = {
-      message: {
-        oneOf: stream.read
-      }
-    }
-  }
-  if (stream.write) {
-    out.subscribe = {
-      message: {
-        oneOf: stream.write
-      }
-    }
-  }
-  return out;
-}
-
 export function objectToSchema(obj: Record<string, unknown>) {
   return { type: 'object', properties: { ...obj } };
 }
@@ -90,26 +52,77 @@ export function dotsToSlashes(topic: string) {
   return topic.replace(/\./g, '/');
 }
 
-export function convertMessage(message: any) {
-  if (message.oneOf) {
-    message.oneOf.forEach((m: any) => {
-      if (m.protocolInfo) {
-        m.bindings = m.protocolInfo;
-        delete m.protocolInfo;
-      }
-          
-      if (m.headers) {
-        m.headers = objectToSchema(m.headers);
-      }
-    });
-  } else {
-    if (message.protocolInfo) {
-      message.bindings = message.protocolInfo;
-      delete message.protocolInfo;
-    }
+export function isPlainObject(value: unknown): boolean {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
 
-    if (message.headers) {
-      message.headers = objectToSchema(message.headers);
-    }
+export function createRefObject(...paths: string[]) {
+  return {
+    $ref: `#/${paths.map(tilde).join('/')}`,
   }
+}
+
+export function isRefObject(value: unknown): boolean {
+  return Boolean(value && '$ref' in (value as { $ref: any }));
+}
+
+export function getValueByRef(root: any, ref: string) {
+  if (!ref.startsWith('#')) {
+    return;
+  }
+
+  // remove `#/` at start, split string by `/` and untilde (change ~1 to / etc)
+  const path = ref.substring(2).split('/').map(untilde);
+  return getDeepValue(root, path);
+}
+
+export function sortObjectKeys(obj: any, keys: string[]) {
+  const newObject: any = {}
+
+  // add sorted keys
+  keys.forEach(key => {
+    if (key in obj) {
+      newObject[key] = obj[key];
+    }
+  });
+
+  // add rest of keys
+  Object.keys(obj).forEach(key => {
+    if (!keys.includes(key)) {
+      newObject[key] = obj[key];
+    }
+  });
+
+  return newObject;
+}
+
+function tilde(str: string) {
+  return str.replace(/[~/]{1}/g, (sub) => {
+    switch (sub) {
+    case '/': return '~1';
+    case '~': return '~0';
+    }
+    return sub;
+  });
+}
+
+function untilde(str: string) {
+  if (!str.includes('~')) return str;
+  return str.replace(/~[01]/g, (sub) => {
+    switch (sub) {
+    case '~1': return '/';
+    case '~0': return '~';
+    }
+    return sub;
+  });
+}
+
+function getDeepValue(value: any, path: string[]) {
+  let index = 0;
+  const length = path.length;
+
+  while (value != null && index < length) {
+    value = value[path[index++]];
+  }
+  return index == length ? value : undefined;
 }
