@@ -38,6 +38,7 @@ servers:
     protocol: mqtt
     security:
       - apiKey: []
+      - flows: ['write:pets']
   production:
     url: 'api.streetlights.smartylighting.com:{port}'
     description: Test broker
@@ -101,6 +102,8 @@ channels:
       operationId: dimLight
       message:
         $ref: '#/components/messages/dimLight'
+      security:
+        - flows: ['write:pets']
 
 components:
   messages:
@@ -158,6 +161,14 @@ components:
       type: apiKey
       in: user
       description: Provide your API key as the user and leave the password empty.
+    flows:
+      type: oauth2
+      flows:
+        implicit:
+          authorizationUrl: https://example.com/api/oauth/dialog
+          scopes:
+            write:pets: modify pets in your account
+            read:pets: read your pets
   parameters:
     streetlightId:
       description: The ID of the streetlight.

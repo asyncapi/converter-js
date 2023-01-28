@@ -33,7 +33,16 @@ servers:
           - '8883'
     protocol: mqtt
     security:
-      - apiKey: []
+      - $ref: '#/components/securitySchemes/apiKey'
+      - type: oauth2
+        flows:
+          implicit:
+            authorizationUrl: 'https://example.com/api/oauth/dialog'
+            availableScopes:
+              'write:pets': modify pets in your account
+              'read:pets': read your pets
+        scopes:
+          - 'write:pets'
   production:
     url: 'api.streetlights.smartylighting.com:{port}'
     description: Test broker
@@ -46,7 +55,7 @@ servers:
           - '8883'
     protocol: mqtt
     security:
-      - apiKey: []
+      - $ref: '#/components/securitySchemes/apiKey'
 channels:
   'smartylighting/streetlights/1/0/event/{streetlightId}/lighting/measured':
     address: 'smartylighting/streetlights/1/0/event/{streetlightId}/lighting/measured'
@@ -138,6 +147,16 @@ operations:
     channel:
       $ref: >-
         #/channels/smartylighting~1streetlights~11~10~1action~1{streetlightId}~1dim
+    security:
+      - type: oauth2
+        flows:
+          implicit:
+            authorizationUrl: 'https://example.com/api/oauth/dialog'
+            availableScopes:
+              'write:pets': modify pets in your account
+              'read:pets': read your pets
+        scopes:
+          - 'write:pets'
     messages:
       - $ref: '#/components/messages/dimLight'
 components:
@@ -196,6 +215,14 @@ components:
       type: apiKey
       in: user
       description: Provide your API key as the user and leave the password empty.
+    flows:
+      type: oauth2
+      flows:
+        implicit:
+          authorizationUrl: 'https://example.com/api/oauth/dialog'
+          availableScopes:
+            'write:pets': modify pets in your account
+            'read:pets': read your pets
   parameters:
     streetlightId:
       description: The ID of the streetlight.

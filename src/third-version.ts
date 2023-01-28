@@ -1,4 +1,4 @@
-import { isPlainObject, createRefObject, isRefObject, sortObjectKeys, getValueByRef } from './utils';
+import { isPlainObject, createRefObject, isRefObject, sortObjectKeys, getValueByRef, getValueByPath } from './utils';
 
 import type { AsyncAPIDocument, ConvertOptions, ConvertFunction } from './interfaces';
 
@@ -18,6 +18,7 @@ function from__2_6_0__to__3_0_0(asyncapi: AsyncAPIDocument, options: ConvertOpti
   }
 
   convertInfoObject(asyncapi);
+  convertServerObjects(asyncapi);
   convertChannelObjects(asyncapi, v2to3);
 
   return sortObjectKeys(
@@ -47,6 +48,22 @@ function convertInfoObject(asyncapi: AsyncAPIDocument) {
 }
 
 /**
+ * Unify referencing mechanism in security field
+ */
+function convertServerObjects(asyncapi: AsyncAPIDocument) {
+  const servers = asyncapi.servers;
+  if (!isPlainObject(servers)) {
+    return;
+  }
+
+  Object.values(servers).forEach((server: any) => {
+    if (server.security) {
+      server.security = convertSecurityObject(server.security, asyncapi);
+    }
+  });
+}
+
+/**
  * Split Channel Objects to the Channel Objects and Operation Objects
  */
 function convertChannelObjects(asyncapi: AsyncAPIDocument, options: ConvertV2To3Options) {
@@ -72,6 +89,10 @@ function convertChannelObjects(asyncapi: AsyncAPIDocument, options: ConvertV2To3
     let publishMessages: Record<string, any> | undefined;
     if (isPlainObject(publish)) {
       const { id, operation: newOperation, messages } = convertOperationObject(publish, 'publish', channelId, channel, asyncapi, options);
+      if (publish.security) {
+        newOperation.security = convertSecurityObject(publish.security, asyncapi);
+      }
+
       operations[id] = newOperation;
       delete channel.publish;
       publishMessages = messages;
@@ -82,6 +103,10 @@ function convertChannelObjects(asyncapi: AsyncAPIDocument, options: ConvertV2To3
     let subscribeMessages: Record<string, any> | undefined;
     if (isPlainObject(subscribe)) {
       const { id, operation: newOperation, messages } = convertOperationObject(subscribe, 'subscribe', channelId, channel, asyncapi, options);
+      if (subscribe.security) {
+        newOperation.security = convertSecurityObject(subscribe.security, asyncapi);
+      }
+
       operations[id] = newOperation;
       delete channel.subscribe;
       subscribeMessages = messages;
@@ -180,4 +205,42 @@ function convertOperationObject(oldOperation: any, kind: 'publish' | 'subscribe'
   );
 
   return { id: operationId, operation: sortedOperation, messages: serializedMessages };
+}
+
+/**
+ * Unify referencing mechanism in security field
+ */
+function convertSecurityObject(security: Array<Record<string, Array<string>>>, asyncapi: AsyncAPIDocument) {
+  const newSecurity: Array<any> = [];
+  security.forEach((securityItem, index) => {
+    Object.entries(securityItem).forEach(([securityName, scopes]) => {
+      // without scopes - use normal ref
+      if (!scopes.length) {
+        newSecurity.push(createRefObject('components', 'securitySchemes', securityName))
+        return;
+      }
+
+      // create new security scheme in the components/securitySchemes with appropriate scopes
+      const securityScheme = getValueByPath(asyncapi, ['components', 'securitySchemes', securityName]);
+      convertSecuritySchemeObject(securityScheme);
+
+      newSecurity.push({
+        ...JSON.parse(JSON.stringify(securityScheme)),
+        scopes: [...scopes],
+      });
+    });
+  });
+  return newSecurity;
+}
+
+function convertSecuritySchemeObject(securityScheme: any) {
+  if (securityScheme.flows) {
+    ['implicit', 'password', 'clientCredentials', 'authorizationCode'].forEach(flow => {
+      const flowScheme = securityScheme.flows[flow];
+      if (flowScheme && flowScheme.scopes) {
+        flowScheme.availableScopes = flowScheme.scopes;
+        delete flowScheme.scopes;
+      }
+    });
+  }
 }

@@ -73,7 +73,17 @@ export function getValueByRef(root: any, ref: string) {
 
   // remove `#/` at start, split string by `/` and untilde (change ~1 to / etc)
   const path = ref.substring(2).split('/').map(untilde);
-  return getDeepValue(root, path);
+  return getValueByPath(root, path);
+}
+
+export function getValueByPath(value: any, path: string[]) {
+  let index = 0;
+  const length = path.length;
+
+  while (value != null && index < length) {
+    value = value[path[index++]];
+  }
+  return index == length ? value : undefined;
 }
 
 export function sortObjectKeys(obj: any, keys: string[]) {
@@ -115,14 +125,4 @@ function untilde(str: string) {
     }
     return sub;
   });
-}
-
-function getDeepValue(value: any, path: string[]) {
-  let index = 0;
-  const length = path.length;
-
-  while (value != null && index < length) {
-    value = value[path[index++]];
-  }
-  return index == length ? value : undefined;
 }
