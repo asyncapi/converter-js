@@ -25,12 +25,13 @@ import type { AsyncAPIDocument, ConvertVersion, ConvertOptions } from './interfa
   '2.3.0': from__2_2_0__to__2_3_0,
   '2.4.0': from__2_3_0__to__2_4_0,
   '2.5.0': from__2_4_0__to__2_5_0,
+  '2.6.0': from__2_5_0__to__2_6_0,
 };
 const conversionVersions = Object.keys(conversions);
 
 export function convert(asyncapi: string, version?: ConvertVersion, options?: ConvertOptions): string;
 export function convert(asyncapi: AsyncAPIDocument, version?: ConvertVersion, options?: ConvertOptions): AsyncAPIDocument;
-export function convert(asyncapi: string | AsyncAPIDocument, version: ConvertVersion = '2.5.0', options: ConvertOptions = {}): string | AsyncAPIDocument {
+export function convert(asyncapi: string | AsyncAPIDocument, version: ConvertVersion = '2.6.0', options: ConvertOptions = {}): string | AsyncAPIDocument {
   const { format, document } = serializeInput(asyncapi);
 
   const asyncapiVersion = document.asyncapi;
@@ -220,5 +221,10 @@ function from__2_3_0__to__2_4_0(asyncapi: AsyncAPIDocument, _: ConvertOptions) {
 
 function from__2_4_0__to__2_5_0(asyncapi: AsyncAPIDocument, _: ConvertOptions) {
   asyncapi.asyncapi = '2.5.0';
+  return asyncapi;
+}
+
+function from__2_5_0__to__2_6_0(asyncapi: AsyncAPIDocument, _: ConvertOptions) {
+  asyncapi.asyncapi = '2.6.0';
   return asyncapi;
 }
