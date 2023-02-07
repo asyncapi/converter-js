@@ -1,12 +1,12 @@
 import { isPlainObject, createRefObject, isRefObject, sortObjectKeys, getValueByRef, getValueByPath, createRefPath } from './utils';
 
-import type { AsyncAPIDocument, ConvertOptions, ConvertV2To3Options, ConvertFunction } from './interfaces';
+import type { AsyncAPIDocument, ConvertOptions, ConvertV2ToV3Options, ConvertFunction } from './interfaces';
 
 export const converters: Record<string, ConvertFunction> = {
   '3.0.0': from__2_6_0__to__3_0_0,
 }
 
-type RequiredConvertV2To3Options =  Required<ConvertV2To3Options>;
+type RequiredConvertV2ToV3Options =  Required<ConvertV2ToV3Options>;
 type ConvertContext =  {
   refs: Map<string, string>;
 };
@@ -14,14 +14,14 @@ type ConvertContext =  {
 function from__2_6_0__to__3_0_0(asyncapi: AsyncAPIDocument, options: ConvertOptions): AsyncAPIDocument {
   asyncapi.asyncapi = '3.0.0';
 
-  const v2to3Options: RequiredConvertV2To3Options = {
+  const v2tov3Options: RequiredConvertV2ToV3Options = {
     pointOfView: 'application',
     useChannelIdExtension: true,
     convertServerComponents: true,
     convertChannelComponents: true,
-    ...(options.v2to3 || {}),
-  } as RequiredConvertV2To3Options;
-  v2to3Options.idGenerator = v2to3Options.idGenerator || idGeneratorFactory(v2to3Options);
+    ...(options.v2tov3 || {}),
+  } as RequiredConvertV2ToV3Options;
+  v2tov3Options.idGenerator = v2tov3Options.idGenerator || idGeneratorFactory(v2tov3Options);
   const context: ConvertContext = {
     refs: new Map(),
   } 
@@ -31,9 +31,9 @@ function from__2_6_0__to__3_0_0(asyncapi: AsyncAPIDocument, options: ConvertOpti
     asyncapi.servers = convertServerObjects(asyncapi.servers, asyncapi);
   }
   if (isPlainObject(asyncapi.channels)) {
-    asyncapi.channels = convertChannelObjects(asyncapi.channels, asyncapi, v2to3Options, context);
+    asyncapi.channels = convertChannelObjects(asyncapi.channels, asyncapi, v2tov3Options, context);
   }
-  convertComponents(asyncapi, v2to3Options, context);
+  convertComponents(asyncapi, v2tov3Options, context);
   replaceDeepRefs(asyncapi, context.refs, '', asyncapi);
 
   return sortObjectKeys(
@@ -98,7 +98,7 @@ function convertServerObjects(servers: Record<string, any>, asyncapi: AsyncAPIDo
 /**
  * Split Channel Objects to the Channel Objects and Operation Objects.
  */
-function convertChannelObjects(channels: Record<string, any>, asyncapi: AsyncAPIDocument, options: RequiredConvertV2To3Options, context: ConvertContext, inComponents: boolean = false) {
+function convertChannelObjects(channels: Record<string, any>, asyncapi: AsyncAPIDocument, options: RequiredConvertV2ToV3Options, context: ConvertContext, inComponents: boolean = false) {
   const newChannels: Record<string, any> = {};
   Object.entries(channels).forEach(([channelAddress, channel]) => {
     const oldPath = inComponents ? ['components', 'channels', channelAddress] : ['channels', channelAddress];
@@ -197,7 +197,7 @@ type ConvertOperationObjectData = {
 /**
  * Points to the connected channel and spli messages for channel
  */
-function convertOperationObject(data: ConvertOperationObjectData, options: RequiredConvertV2To3Options, context: ConvertContext): { operationId: string, operation: any, messages?: Record<string, any> } {
+function convertOperationObject(data: ConvertOperationObjectData, options: RequiredConvertV2ToV3Options, context: ConvertContext): { operationId: string, operation: any, messages?: Record<string, any> } {
   const { asyncapi, channel, channelId, oldChannelId, kind, inComponents } = data;
   const operation = { ...data.operation };
 
@@ -279,7 +279,7 @@ function convertOperationObject(data: ConvertOperationObjectData, options: Requi
 /**
  * Convert `channels`, `servers` and `securitySchemes` in components.
  */
-function convertComponents(asyncapi: AsyncAPIDocument, options: RequiredConvertV2To3Options, context: ConvertContext) {
+function convertComponents(asyncapi: AsyncAPIDocument, options: RequiredConvertV2ToV3Options, context: ConvertContext) {
   const components = asyncapi.components;
   if (!isPlainObject(components)) {
     return;
@@ -429,9 +429,9 @@ function replaceRef(ref: string, refs: ConvertContext['refs']): string | undefin
 /**
  * Default function to generate ids for objects.
  */
-function idGeneratorFactory(options: ConvertV2To3Options): ConvertV2To3Options['idGenerator'] {
+function idGeneratorFactory(options: ConvertV2ToV3Options): ConvertV2ToV3Options['idGenerator'] {
   const useChannelIdExtension = options.useChannelIdExtension;
-  return (data: Parameters<Exclude<ConvertV2To3Options['idGenerator'], undefined>>[0]): string => {
+  return (data: Parameters<Exclude<ConvertV2ToV3Options['idGenerator'], undefined>>[0]): string => {
     const { asyncapi, kind, object, path, key, parentId } = data;
 
     switch (kind) {
