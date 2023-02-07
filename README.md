@@ -15,6 +15,7 @@ Convert [AsyncAPI](https://asyncapi.com) documents older to newer versions.
   * [From CLI](#from-cli)
   * [In JS](#in-js)
   * [In TS](#in-ts)
+- [Conversion 2.x.x to 3.x.x](#conversion-2xx-to-3xx)
 - [Known missing features](#known-missing-features)
 - [Development](#development)
 - [Contribution](#contribution)
