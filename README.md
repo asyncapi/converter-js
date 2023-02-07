@@ -70,9 +70,7 @@ const { convert } = require('@asyncapi/converter')
 
 try {
   const asyncapi = fs.readFileSync('streetlights.yml', 'utf-8')
-  console.log(convert(asyncapi, '2.0.0', {
-    id: 'urn:com.asyncapi.streetlights'
-  }));
+  console.log(convert(asyncapi, '2.0.0'));
 } catch (e) {
   console.error(e);
 }
@@ -86,12 +84,8 @@ import type { ConvertVersion, ConvertOptions } from '@asyncapi/converter';
 
 try {
   const toVersion: ConvertVersion = '2.0.0';
-  const options: ConvertOptions = {
-    id: 'urn:com.asyncapi.streetlights'
-  };
-
   const asyncapi = fs.readFileSync('streetlights.yml', 'utf-8')
-  console.log(convert(asyncapi, toVersion, options));
+  console.log(convert(asyncapi, toVersion));
 } catch (e) {
   console.error(e)
 }
