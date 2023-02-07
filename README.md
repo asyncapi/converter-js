@@ -106,7 +106,7 @@ try {
 
 ## Conversion 2.x.x to 3.x.x
 
-Converting to version `3.x.x` from `2.x.x` has several assumptions that should be know before converting:
+Conversion to version `3.x.x` from `2.x.x` has several assumptions that should be know before converting:
 
 - the input must be valid AsyncAPI document.
 - external references are not resolved and converted, they remain untouched, even if they are incorrect.
