@@ -39,8 +39,22 @@ servers:
     security:
       - apiKey: []
       - flows: ['write:pets']
+      - openIdConnect: ['some:scope:1', 'some:scope:2']
   production:
-    url: 'api.streetlights.smartylighting.com:{port}'
+    url: 'api.streetlights.smartylighting.com:{port}/some/path'
+    description: Test broker
+    variables:
+      port:
+        description: Secure connection (TLS) is available through port 8883.
+        default: '1883'
+        enum:
+          - '1883'
+          - '8883'
+    protocol: mqtt
+    security:
+      - apiKey: []
+  withProtocol:
+    url: 'mqtt://api.streetlights.smartylighting.com:{port}/some/path'
     description: Test broker
     variables:
       port:
@@ -162,6 +176,17 @@ components:
       in: user
       description: Provide your API key as the user and leave the password empty.
     flows:
+      type: oauth2
+      flows:
+        implicit:
+          authorizationUrl: https://example.com/api/oauth/dialog
+          scopes:
+            write:pets: modify pets in your account
+            read:pets: read your pets
+    openIdConnect:
+      type: openIdConnect
+      openIdConnectUrl: 'openIdConnectUrl'
+    unusedFlows:
       type: oauth2
       flows:
         implicit:

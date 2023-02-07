@@ -22,7 +22,8 @@ info:
 defaultContentType: application/json
 servers:
   default:
-    url: 'api.streetlights.smartylighting.com:{port}'
+    host: 'api.streetlights.smartylighting.com:{port}'
+    protocol: mqtt
     description: Test broker
     variables:
       port:
@@ -31,7 +32,6 @@ servers:
         enum:
           - '1883'
           - '8883'
-    protocol: mqtt
     security:
       - $ref: '#/components/securitySchemes/apiKey'
       - type: oauth2
@@ -43,8 +43,15 @@ servers:
               'read:pets': read your pets
         scopes:
           - 'write:pets'
+      - type: openIdConnect
+        openIdConnectUrl: openIdConnectUrl
+        scopes:
+          - 'some:scope:1'
+          - 'some:scope:2'
   production:
-    url: 'api.streetlights.smartylighting.com:{port}'
+    host: 'api.streetlights.smartylighting.com:{port}'
+    pathname: /some/path
+    protocol: mqtt
     description: Test broker
     variables:
       port:
@@ -53,7 +60,20 @@ servers:
         enum:
           - '1883'
           - '8883'
+    security:
+      - $ref: '#/components/securitySchemes/apiKey'
+  withProtocol:
+    host: 'api.streetlights.smartylighting.com:{port}'
+    pathname: /some/path
     protocol: mqtt
+    description: Test broker
+    variables:
+      port:
+        description: Secure connection (TLS) is available through port 8883.
+        default: '1883'
+        enum:
+          - '1883'
+          - '8883'
     security:
       - $ref: '#/components/securitySchemes/apiKey'
 channels:
@@ -138,8 +158,7 @@ operations:
   turnOnOff:
     action: send
     channel:
-      $ref: >-
-        #/channels/smartylighting~1streetlights~11~10~1action~1{streetlightId}~1turn~1off
+      $ref: '#/channels/customChannelId'
     messages:
       - $ref: '#/components/messages/turnOnOff'
   dimLight:
@@ -216,6 +235,17 @@ components:
       in: user
       description: Provide your API key as the user and leave the password empty.
     flows:
+      type: oauth2
+      flows:
+        implicit:
+          authorizationUrl: 'https://example.com/api/oauth/dialog'
+          availableScopes:
+            'write:pets': modify pets in your account
+            'read:pets': read your pets
+    openIdConnect:
+      type: openIdConnect
+      openIdConnectUrl: openIdConnectUrl
+    unusedFlows:
       type: oauth2
       flows:
         implicit:

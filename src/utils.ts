@@ -56,10 +56,14 @@ export function isPlainObject(value: unknown): boolean {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
 
-export function createRefObject(...paths: string[]) {
+export function createRefObject(...paths: Array<string | number>) {
   return {
-    $ref: `#/${paths.map(tilde).join('/')}`,
+    $ref: createRefPath(...paths),
   }
+}
+
+export function createRefPath(...paths: Array<string | number>) {
+  return `#/${paths.map(String).map(tilde).join('/')}`;
 }
 
 export function isRefObject(value: unknown): boolean {

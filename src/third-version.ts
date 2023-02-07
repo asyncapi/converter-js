@@ -1,25 +1,40 @@
-import { isPlainObject, createRefObject, isRefObject, sortObjectKeys, getValueByRef, getValueByPath } from './utils';
+import { isPlainObject, createRefObject, isRefObject, sortObjectKeys, getValueByRef, getValueByPath, createRefPath } from './utils';
 
-import type { AsyncAPIDocument, ConvertOptions, ConvertFunction } from './interfaces';
-
-type ConvertV2To3Options = Required<Exclude<ConvertOptions['v2to3'], undefined>>;
+import type { AsyncAPIDocument, ConvertOptions, ConvertV2To3Options, ConvertFunction } from './interfaces';
 
 export const converters: Record<string, ConvertFunction> = {
   '3.0.0': from__2_6_0__to__3_0_0,
 }
 
+type RequiredConvertV2To3Options =  Required<ConvertV2To3Options>;
+type ConvertContext =  {
+  refs: Map<string, string>;
+};
+
 function from__2_6_0__to__3_0_0(asyncapi: AsyncAPIDocument, options: ConvertOptions): AsyncAPIDocument {
   asyncapi.asyncapi = '3.0.0';
 
-  const v2to3: ConvertV2To3Options = {
-    ...(options.v2to3 || {}),
-    idGenerator() { return '' },
+  const v2to3Options: RequiredConvertV2To3Options = {
     pointOfView: 'application',
-  }
+    useChannelIdExtension: true,
+    convertServerComponents: true,
+    convertChannelComponents: true,
+    ...(options.v2to3 || {}),
+  } as RequiredConvertV2To3Options;
+  v2to3Options.idGenerator = v2to3Options.idGenerator || idGeneratorFactory(v2to3Options);
+  const context: ConvertContext = {
+    refs: new Map(),
+  } 
 
-  convertInfoObject(asyncapi);
-  convertServerObjects(asyncapi);
-  convertChannelObjects(asyncapi, v2to3);
+  convertInfoObject(asyncapi, context);
+  if (isPlainObject(asyncapi.servers)) {
+    asyncapi.servers = convertServerObjects(asyncapi.servers, asyncapi);
+  }
+  if (isPlainObject(asyncapi.channels)) {
+    asyncapi.channels = convertChannelObjects(asyncapi.channels, asyncapi, v2to3Options, context);
+  }
+  convertComponents(asyncapi, v2to3Options, context);
+  replaceDeepRefs(asyncapi, context.refs, '', asyncapi);
 
   return sortObjectKeys(
     asyncapi, 
@@ -28,55 +43,76 @@ function from__2_6_0__to__3_0_0(asyncapi: AsyncAPIDocument, options: ConvertOpti
 }
 
 /**
- * Moving Tags and ExternalDocs to the Info Object
+ * Moving Tags and ExternalDocs to the Info Object.
  */
-function convertInfoObject(asyncapi: AsyncAPIDocument) {
+function convertInfoObject(asyncapi: AsyncAPIDocument, context: ConvertContext) {
   if (asyncapi.tags) {
     asyncapi.info.tags = asyncapi.tags;
+    context.refs.set(createRefPath('tags'), createRefPath('info', 'tags'));
     delete asyncapi.tags;
   }
 
   if (asyncapi.externalDocs) {
     asyncapi.info.externalDocs = asyncapi.externalDocs;
+    context.refs.set(createRefPath('externalDocs'), createRefPath('info', 'externalDocs'));
     delete asyncapi.externalDocs;
   }
 
   asyncapi.info = sortObjectKeys(
     asyncapi.info,
-    ['title', 'version', 'description', 'termsOfService', 'contact', 'license', 'tags', 'externalDocs']
-  )
+    ['title', 'version', 'description', 'termsOfService', 'contact', 'license', 'tags', 'externalDocs'],
+  );
 }
 
 /**
- * Unify referencing mechanism in security field
+ * Split `url` field to the `host` and `pathname` (optional) fields.
+ * Unify referencing mechanism in security field.
  */
-function convertServerObjects(asyncapi: AsyncAPIDocument) {
-  const servers = asyncapi.servers;
-  if (!isPlainObject(servers)) {
-    return;
-  }
+function convertServerObjects(servers: Record<string, any>, asyncapi: AsyncAPIDocument) {
+  const newServers: Record<string, any> = {};
+  Object.entries(servers).forEach(([serverName, server]: [string, any]) => {
+    if (isRefObject(server)) {
+      newServers[serverName] = server;
+      return;
+    }
 
-  Object.values(servers).forEach((server: any) => {
+    const { host, pathname } = resolveServerUrl(server.url);
+    server.host = host;
+    if (pathname !== undefined) {
+      server.pathname = pathname;
+    }
+    delete server.url;
+
     if (server.security) {
       server.security = convertSecurityObject(server.security, asyncapi);
     }
+
+    newServers[serverName] = sortObjectKeys(
+      server,
+      ['host', 'pathname', 'protocol', 'protocolVersion', 'title', 'summary', 'description', 'variables', 'security', 'tags', 'externalDocs', 'bindings'],
+    );
   });
+  return newServers;
 }
 
 /**
- * Split Channel Objects to the Channel Objects and Operation Objects
+ * Split Channel Objects to the Channel Objects and Operation Objects.
  */
-function convertChannelObjects(asyncapi: AsyncAPIDocument, options: ConvertV2To3Options) {
-  const channels = asyncapi.channels;
-  if (!isPlainObject(channels)) {
-    return;
-  }
-
+function convertChannelObjects(channels: Record<string, any>, asyncapi: AsyncAPIDocument, options: RequiredConvertV2To3Options, context: ConvertContext, inComponents: boolean = false) {
   const newChannels: Record<string, any> = {};
-  Object.entries(channels).forEach(([channelAddress, channel]: [string, any]) => {
-    const channelId = channel['x-channelId'] || channelAddress;
-    channel.address = channelAddress;
+  Object.entries(channels).forEach(([channelAddress, channel]) => {
+    const oldPath = inComponents ? ['components', 'channels', channelAddress] : ['channels', channelAddress];
+    const channelId = options.idGenerator({ asyncapi, kind: 'channel', key: channelAddress, path: oldPath, object: channel });
+    const newPath = inComponents ? ['components', 'channels', channelId] : ['channels', channelId];
+    context.refs.set(createRefPath(...oldPath), createRefPath(...newPath));
 
+    if (isRefObject(channel)) {
+      newChannels[channelId] = channel;
+      return;
+    }
+
+    // assign address
+    channel.address = channelAddress;
     // change the Server names to the Refs
     const servers = channel.servers;
     if (Array.isArray(servers)) {
@@ -88,12 +124,14 @@ function convertChannelObjects(asyncapi: AsyncAPIDocument, options: ConvertV2To3
     const publish = channel.publish;
     let publishMessages: Record<string, any> | undefined;
     if (isPlainObject(publish)) {
-      const { id, operation: newOperation, messages } = convertOperationObject(publish, 'publish', channelId, channel, asyncapi, options);
+      const { operationId, operation: newOperation, messages } = convertOperationObject({ asyncapi, kind: 'publish', channel, channelId, oldChannelId: channelAddress, operation: publish, inComponents }, options, context);
       if (publish.security) {
         newOperation.security = convertSecurityObject(publish.security, asyncapi);
       }
 
-      operations[id] = newOperation;
+      const operationPath = inComponents ? ['components', 'operations', operationId] : ['operations', operationId];
+      context.refs.set(createRefPath(...oldPath, 'publish'), createRefPath(...operationPath));
+      operations[operationId] = newOperation;
       delete channel.publish;
       publishMessages = messages;
     }
@@ -102,12 +140,14 @@ function convertChannelObjects(asyncapi: AsyncAPIDocument, options: ConvertV2To3
     const subscribe = channel.subscribe;
     let subscribeMessages: Record<string, any> | undefined;
     if (isPlainObject(subscribe)) {
-      const { id, operation: newOperation, messages } = convertOperationObject(subscribe, 'subscribe', channelId, channel, asyncapi, options);
+      const { operationId, operation: newOperation, messages } = convertOperationObject({ asyncapi, kind: 'subscribe', channel, channelId, oldChannelId: channelAddress, operation: subscribe, inComponents }, options, context);
       if (subscribe.security) {
         newOperation.security = convertSecurityObject(subscribe.security, asyncapi);
       }
 
-      operations[id] = newOperation;
+      const operationPath = inComponents ? ['components', 'operations', operationId] : ['operations', operationId];
+      context.refs.set(createRefPath(...oldPath, 'subscribe'), createRefPath(...operationPath));
+      operations[operationId] = newOperation;
       delete channel.subscribe;
       subscribeMessages = messages;
     }
@@ -120,7 +160,21 @@ function convertChannelObjects(asyncapi: AsyncAPIDocument, options: ConvertV2To3
     }
 
     if (Object.keys(operations)) {
-      asyncapi.operations = { ...asyncapi.operations || {}, ...operations };
+      if (inComponents) {
+        const components = asyncapi.components = asyncapi.components || {};
+        components.operations = { ...components.operations || {}, ...operations };
+
+        // if given component is used in the `channels` object then create references for operations in the `operations` object
+        if (channelIsUsed(asyncapi.channels || {}, oldPath)) {
+          const referencedOperations = Object.keys(operations).reduce((acc, current) => {
+            acc[current] = createRefObject('components', 'operations', current);
+            return acc;
+          }, {} as Record<string, any>);
+          asyncapi.operations = { ...asyncapi.operations || {}, ...referencedOperations };
+        }
+      } else {
+        asyncapi.operations = { ...asyncapi.operations || {}, ...operations };
+      }
     }
 
     newChannels[channelId] = sortObjectKeys(
@@ -128,16 +182,40 @@ function convertChannelObjects(asyncapi: AsyncAPIDocument, options: ConvertV2To3
       ['address', 'messages', 'title', 'summary', 'description', 'servers', 'parameters', 'tags', 'externalDocs', 'bindings'],
     );
   });
-
-  asyncapi.channels = newChannels;
+  return newChannels;
 }
 
-function convertOperationObject(oldOperation: any, kind: 'publish' | 'subscribe', channelId: string, channel: any, asyncapi: AsyncAPIDocument, options: ConvertV2To3Options): { id: string, operation: any, messages?: Record<string, any> } {
-  const operation = { ...oldOperation };
+type ConvertOperationObjectData = {
+  asyncapi: AsyncAPIDocument;
+  operation: any;
+  channel: any;
+  channelId: string;
+  oldChannelId: string;
+  kind: 'publish' | 'subscribe';
+  inComponents: boolean;
+}
+/**
+ * Points to the connected channel and spli messages for channel
+ */
+function convertOperationObject(data: ConvertOperationObjectData, options: RequiredConvertV2To3Options, context: ConvertContext): { operationId: string, operation: any, messages?: Record<string, any> } {
+  const { asyncapi, channel, channelId, oldChannelId, kind, inComponents } = data;
+  const operation = { ...data.operation };
 
-  if (channel.address) {
-    operation.channel = createRefObject('channels', channel.address);
+  const oldChannelPath = ['channels', oldChannelId];
+  if (inComponents) {
+    oldChannelPath.unshift('components');
   }
+  const newChannelPath = ['channels', channelId];
+  if (inComponents) {
+    newChannelPath.unshift('components');
+  }
+
+  const operationId = options.idGenerator({ asyncapi, kind: 'operation', key: kind, path: oldChannelPath, object: data.operation, parentId: channelId });
+  operation.channel = createRefObject(...newChannelPath);
+  try {
+    delete operation.operationId;
+  } catch(err) {}
+
 
   const isPublish = kind === 'publish';
   if (options.pointOfView === 'application') {
@@ -146,42 +224,32 @@ function convertOperationObject(oldOperation: any, kind: 'publish' | 'subscribe'
     operation.action = isPublish ? 'send' : 'receive';
   }
 
-  const oldOperationId = operation.operationId;
-  const operationId = oldOperationId || (channelId ? `${channelId}.${kind}` : kind);
-  try {
-    delete operation.operationId;
-  } catch(err) {}
-
   const message = operation.message;
   let serializedMessages: Record<string, any> | undefined;
   if (message) {
     delete operation.message;
 
+    const oldMessagePath = ['channels', oldChannelId, kind, 'message'];
+    if (inComponents) {
+      oldMessagePath.unshift('components');
+    }
+    const newMessagePath = ['channels', channelId, 'messages'];
+    if (inComponents) {
+      newMessagePath.unshift('components');
+    }
+
     if (Array.isArray(message.oneOf)) {
       serializedMessages = message.oneOf.reduce((acc: Record<string, any>, current: any, index: number) => {
-        let messageId: string | undefined = current.messageId;
-        if (isRefObject(current)) {
-          const possibleMessage = getValueByRef(asyncapi, current.$ref);
-          if (possibleMessage) {
-            messageId = possibleMessage.messageId || messageId;
-          }
-        }
-
-        const id = messageId || `${oldOperationId || kind}.message.${index}`;
-        acc[id] = current;
+        const messagePath = [...oldMessagePath, 'oneOf', index];
+        const messageId = options.idGenerator({ asyncapi, kind: 'message', key: index, path: messagePath, object: current, parentId: operationId });
+        context.refs.set(createRefPath(...messagePath), createRefPath(...newMessagePath, messageId));
+        acc[messageId] = current;
         return acc;
       }, {});
     } else {
-      let messageId: string | undefined = message.messageId;
-      if (isRefObject(message)) {
-        const possibleMessage = getValueByRef(asyncapi, message.$ref);
-        if (possibleMessage) {
-          messageId = possibleMessage.messageId || messageId;
-        }
-      }
-
-      const id = messageId || `${oldOperationId || kind}.message`;
-      serializedMessages = { [id]: message };
+      const messageId = options.idGenerator({ asyncapi, kind: 'message', key: 'message', path: oldMessagePath, object: message, parentId: operationId });
+      context.refs.set(createRefPath(...oldMessagePath), createRefPath(...newMessagePath, messageId));
+      serializedMessages = { [messageId]: message };
     }
 
     if (Object.keys(serializedMessages || {})) {
@@ -192,7 +260,8 @@ function convertOperationObject(oldOperation: any, kind: 'publish' | 'subscribe'
           // shallow copy of JS reference
           newOperationMessages.push({ ...messageValue });
         } else {
-          newOperationMessages.push(createRefObject('channels', channel.address, 'messages', messageId));
+          const messagePath = [...newMessagePath, messageId];
+          newOperationMessages.push(createRefObject(...messagePath));
         }
       });
       operation.messages = newOperationMessages;
@@ -204,7 +273,38 @@ function convertOperationObject(oldOperation: any, kind: 'publish' | 'subscribe'
     ['action', 'channel', 'title', 'summary', 'description', 'security', 'tags', 'externalDocs', 'bindings', 'traits'],
   );
 
-  return { id: operationId, operation: sortedOperation, messages: serializedMessages };
+  return { operationId, operation: sortedOperation, messages: serializedMessages };
+}
+
+/**
+ * Convert `channels`, `servers` and `securitySchemes` in components.
+ */
+function convertComponents(asyncapi: AsyncAPIDocument, options: RequiredConvertV2To3Options, context: ConvertContext) {
+  const components = asyncapi.components;
+  if (!isPlainObject(components)) {
+    return;
+  }
+
+  if (options.convertServerComponents && isPlainObject(components.servers)) {
+    components.servers = convertServerObjects(components.servers, asyncapi);
+  }
+  if (options.convertChannelComponents && isPlainObject(components.channels)) {
+    components.channels = convertChannelObjects(components.channels, asyncapi, options, context, true);
+  }
+  if (isPlainObject(components.securitySchemes)) {
+    components.securitySchemes = convertSecuritySchemes(components.securitySchemes);
+  }
+}
+
+/**
+ * Convert `channels`, `servers` and `securitySchemes` in components.
+ */
+function convertSecuritySchemes(securitySchemes: Record<string, any>): Record<string, any> {
+  const newSecuritySchemes: Record<string, any> = {};
+  Object.entries(securitySchemes).forEach(([name, scheme]) => {
+    newSecuritySchemes[name] = convertSecuritySchemeObject(scheme);
+  });
+  return newSecuritySchemes;
 }
 
 /**
@@ -212,9 +312,9 @@ function convertOperationObject(oldOperation: any, kind: 'publish' | 'subscribe'
  */
 function convertSecurityObject(security: Array<Record<string, Array<string>>>, asyncapi: AsyncAPIDocument) {
   const newSecurity: Array<any> = [];
-  security.forEach((securityItem, index) => {
+  security.forEach(securityItem => {
     Object.entries(securityItem).forEach(([securityName, scopes]) => {
-      // without scopes - use normal ref
+      // without scopes - use ref
       if (!scopes.length) {
         newSecurity.push(createRefObject('components', 'securitySchemes', securityName))
         return;
@@ -222,20 +322,27 @@ function convertSecurityObject(security: Array<Record<string, Array<string>>>, a
 
       // create new security scheme in the components/securitySchemes with appropriate scopes
       const securityScheme = getValueByPath(asyncapi, ['components', 'securitySchemes', securityName]);
-      convertSecuritySchemeObject(securityScheme);
-
-      newSecurity.push({
-        ...JSON.parse(JSON.stringify(securityScheme)),
-        scopes: [...scopes],
-      });
+      // handle logic only on `oauth2` and `openIdConnect` security mechanism
+      if (securityScheme.type === 'oauth2' || securityScheme.type === 'openIdConnect') {
+        const newSecurityScheme = convertSecuritySchemeObject(securityScheme);
+        newSecurity.push({
+          ...newSecurityScheme,
+          scopes: [...scopes],
+        });
+      }
     });
   });
   return newSecurity;
 }
 
-function convertSecuritySchemeObject(securityScheme: any) {
+const flowKinds = ['implicit', 'password', 'clientCredentials', 'authorizationCode'];
+/**
+ * Convert security scheme object to new from v3 version (flow.[x].scopes -> flow.[x].availableScopes).
+ */
+function convertSecuritySchemeObject(original: any) {
+  const securityScheme = JSON.parse(JSON.stringify(original));
   if (securityScheme.flows) {
-    ['implicit', 'password', 'clientCredentials', 'authorizationCode'].forEach(flow => {
+    flowKinds.forEach(flow => {
       const flowScheme = securityScheme.flows[flow];
       if (flowScheme && flowScheme.scopes) {
         flowScheme.availableScopes = flowScheme.scopes;
@@ -243,4 +350,139 @@ function convertSecuritySchemeObject(securityScheme: any) {
       }
     });
   }
+  return securityScheme;
+}
+
+/**
+ * Split `url` to the `host` and `pathname` (optional) fields.
+ */
+function resolveServerUrl(url: string): { host: string, pathname: string | undefined } {
+  let [maybeProtocol, maybeHost] = url.split('://');
+  if (!maybeHost) {
+    maybeHost = maybeProtocol;
+  }
+
+  const [host, ...pathnames] = maybeHost.split('/');
+  if (pathnames.length) {
+    return { host, pathname: `/${pathnames.join('/')}` };
+  }
+  return { host, pathname: undefined };
+}
+
+/**
+ * Check if given channel (based on path) is used in the `channels` object.
+ */
+function channelIsUsed(channels: Record<string, any>, path: Array<string | number>): boolean {
+  for (const channel of Object.values(channels)) {
+    if (isRefObject(channel) && createRefPath(...path) === channel.$ref) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Replace all deep local references with the new beginning of ref (when object is moved to another place).
+ */
+function replaceDeepRefs(value: any, refs: ConvertContext['refs'], key: string | number, parent: any): void {
+  if (key === '$ref' && typeof value === 'string') {
+    const newRef = replaceRef(value, refs);
+    if (typeof newRef === 'string') {
+      parent[key] = newRef;
+    }
+    return;
+  }
+
+  if (Array.isArray(value)) {
+    return value.forEach((item, idx) => replaceDeepRefs(item, refs, idx, value));
+  }
+
+  if (value && typeof value === 'object') {
+    for (const objKey in value) {
+      replaceDeepRefs(value[objKey], refs, objKey, value);
+    }
+  }
+}
+
+function replaceRef(ref: string, refs: ConvertContext['refs']): string | undefined {
+  const allowed: string[] = [];
+  refs.forEach((_, key) => {
+    // few refs can be allowed
+    if (ref.startsWith(key)) {
+      allowed.push(key);
+    }
+  });
+
+  // find the longest one
+  allowed.sort((a, b) => a.length - b.length);
+  const from = allowed.pop();
+  if (!from) {
+    return;
+  }
+
+  const toReplace = refs.get(from);
+  if (toReplace) {
+    return ref.replace(from, toReplace);
+  }
+}
+
+/**
+ * Default function to generate ids for objects.
+ */
+function idGeneratorFactory(options: ConvertV2To3Options): ConvertV2To3Options['idGenerator'] {
+  const useChannelIdExtension = options.useChannelIdExtension;
+  return (data: Parameters<Exclude<ConvertV2To3Options['idGenerator'], undefined>>[0]): string => {
+    const { asyncapi, kind, object, path, key, parentId } = data;
+
+    switch (kind) {
+      case 'channel': {
+        if (isRefObject(object)) {
+          const id = key as string;
+          return id;
+        }
+
+        const channel = object;
+        let channelId: string;
+        if (useChannelIdExtension) {
+          channelId = channel['x-channelId'] || key as string;
+        } else {
+          channelId = key as string;
+        }
+        return channelId;
+      };
+      case 'operation': {
+        const oldOperationId = object.operationId;
+        const operationId = oldOperationId || (parentId ? `${parentId}.${key}` : kind);
+        return operationId;
+      };
+      case 'message': {
+        if (isRefObject(object)) {
+          const possibleMessage = getValueByRef(asyncapi, object.$ref);
+          if (possibleMessage && possibleMessage.messageId) {
+            const messageId = possibleMessage.messageId;
+            return messageId;
+          }
+        }
+
+        const messageId = object.messageId;
+        if (messageId) {
+          return messageId;
+        }
+
+        let operationKind: string;
+        const splitParentId = parentId!.split('.');
+        if (splitParentId.length === 1) {
+          operationKind = parentId as string;
+        } else {
+          operationKind = splitParentId.pop() as string;
+        }
+
+        if (typeof key === 'number') {
+          return `${operationKind}.message.${key}`;
+        }
+        return `${operationKind}.message`;
+      };
+      default: return '';
+    }
+  };
 }
