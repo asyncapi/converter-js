@@ -18,7 +18,7 @@ const conversionVersions = Object.keys(converters);
 
 export function convert(asyncapi: string, version?: ConvertVersion, options?: ConvertOptions): string;
 export function convert(asyncapi: AsyncAPIDocument, version?: ConvertVersion, options?: ConvertOptions): AsyncAPIDocument;
-export function convert(asyncapi: string | AsyncAPIDocument, version: ConvertVersion = '3.0.0', options: ConvertOptions = {}): string | AsyncAPIDocument {
+export function convert(asyncapi: string | AsyncAPIDocument, version: ConvertVersion = '2.6.0', options: ConvertOptions = {}): string | AsyncAPIDocument {
   const { format, document } = serializeInput(asyncapi);
 
   const asyncapiVersion = document.asyncapi;

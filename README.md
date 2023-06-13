@@ -52,7 +52,7 @@ channels:
 ...
 ```
 
-Convert to specific version:
+Convert to a specific version:
 
 ```sh
 asyncapi convert streetlights.yml -o streetlights2.yml -t 2.3.0
@@ -71,7 +71,7 @@ const { convert } = require('@asyncapi/converter')
 
 try {
   const asyncapi = fs.readFileSync('streetlights.yml', 'utf-8')
-  console.log(convert(asyncapi, '3.0.0', {
+  console.log(convert(asyncapi, '2.6.0', {
     v2tov3: {
       convertServerComponents: false,
       convertChannelComponents: false,
@@ -89,7 +89,7 @@ import { convert } from '@asyncapi/converter';
 import type { ConvertVersion, ConvertOptions } from '@asyncapi/converter';
 
 try {
-  const toVersion: ConvertVersion = '3.0.0';
+  const toVersion: ConvertVersion = '2.6.0';
   const options: ConvertOptions = {
     v2tov3: {
       convertServerComponents: false,
@@ -103,73 +103,6 @@ try {
   console.error(e)
 }
 ```
-
-## Conversion 2.x.x to 3.x.x
-
-Conversion to version `3.x.x` from `2.x.x` has several assumptions that should be know before converting:
-
-- The input must be valid AsyncAPI document.
-- External references are not resolved and converted, they remain untouched, even if they are incorrect.
-- In version `3.0.0`, the channel identifier is no longer its address, but due to the difficulty of defining a unique identifier, we still treat the address as an identifier. If there is a need to assign an identifier other than an address, an `x-channelId` extension should be defined at the level of the given channel.
-
-  ```yaml
-  # 2.x.x
-  channels:
-    users/signup:
-      x-channelId: 'userSignUp'
-      ...
-    users/logout:
-      ...
-
-  # 3.0.0
-  channels:
-    userSignUp:
-      ...
-    users/logout:
-      ...
-  ```
-
-- The `publish` operation is treated as a `receive` action, and `subscribe` is treated as a `send` action. Conversion by default is embraced from the application perspective. If you want to change this logic, you need to specify `v2tov3.pointOfView` configuration as `client`.
-- If the operation does not have an `operationId` field defined, the unique identifier of the operation will be defined as a combination of the identifier of the channel on which the operation was defined + the type of operation, `publish` or `subscribe`. Identical situation is with messages. However, here the priority is the `messageId` field and then the concatenation `{publish|subscribe}.messages.{optional index of oneOf messages}`.
-
-  ```yaml
-  # 2.x.x
-  channels:
-    users/signup:
-      publish:
-        message:
-          ...
-      subscribe:
-        operationId: 'userSignUpEvent'
-        message:
-          oneOf:
-            - messageId: 'userSignUpEventMessage'
-              ...
-            - ...
-        
-
-  # 3.0.0
-  channels:
-    users/signup:
-      messages:
-        publish.message:
-          ...
-        userSignUpEventMessage:
-          ...
-        userSignUpEvent.message.1:
-          ...
-  operations:
-    users/signup.publish:
-      action: receive
-      ...
-    userSignUpEvent:
-      action: send
-      ...
-  ```
-
-- Security requirements that use scopes are defined in the appropriate places inline, the rest as a reference to the `components.securitySchemes` objects.
-- If servers are defined at the channel level, they are converted as references to the corresponding objects defined in the `servers` field.
-- Channels and servers defined in components are also converted (unless configured - see [examples](#in-js)).
 
 ## Known missing features
 
