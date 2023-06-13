@@ -15,7 +15,6 @@ Convert [AsyncAPI](https://asyncapi.com) documents older to newer versions.
   * [From CLI](#from-cli)
   * [In JS](#in-js)
   * [In TS](#in-ts)
-- [Conversion 2.x.x to 3.x.x](#conversion-2xx-to-3xx)
 - [Known missing features](#known-missing-features)
 - [Development](#development)
 - [Contribution](#contribution)
@@ -71,12 +70,7 @@ const { convert } = require('@asyncapi/converter')
 
 try {
   const asyncapi = fs.readFileSync('streetlights.yml', 'utf-8')
-  console.log(convert(asyncapi, '2.6.0', {
-    v2tov3: {
-      convertServerComponents: false,
-      convertChannelComponents: false,
-    }
-  }));
+  console.log(convert(asyncapi, '2.6.0'));
 } catch (e) {
   console.error(e);
 }
@@ -90,15 +84,8 @@ import type { ConvertVersion, ConvertOptions } from '@asyncapi/converter';
 
 try {
   const toVersion: ConvertVersion = '2.6.0';
-  const options: ConvertOptions = {
-    v2tov3: {
-      convertServerComponents: false,
-      convertChannelComponents: false,
-    }
-  };
-
   const asyncapi = fs.readFileSync('streetlights.yml', 'utf-8')
-  console.log(convert(asyncapi, toVersion, options));
+  console.log(convert(asyncapi, toVersion));
 } catch (e) {
   console.error(e)
 }
