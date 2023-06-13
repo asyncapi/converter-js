@@ -1,5 +1,4 @@
 import { isPlainObject, createRefObject, isRefObject, sortObjectKeys, getValueByRef, getValueByPath, createRefPath } from './utils';
-
 import type { AsyncAPIDocument, ConvertOptions, ConvertV2ToV3Options, ConvertFunction } from './interfaces';
 
 export const converters: Record<string, ConvertFunction> = {
@@ -76,10 +75,14 @@ function convertServerObjects(servers: Record<string, any>, asyncapi: AsyncAPIDo
       return;
     }
 
-    const { host, pathname } = resolveServerUrl(server.url);
+    const { host, pathname, protocol } = resolveServerUrl(server.url);
     server.host = host;
     if (pathname !== undefined) {
       server.pathname = pathname;
+    }
+    // Dont overwrite anything
+    if(protocol !== undefined && server.protocol === undefined) {
+      server.protocol = protocol;
     }
     delete server.url;
 
@@ -355,8 +358,10 @@ function convertSecuritySchemeObject(original: any) {
 
 /**
  * Split `url` to the `host` and `pathname` (optional) fields.
+ * 
+ * This function takes care of https://github.com/asyncapi/spec/pull/888
  */
-function resolveServerUrl(url: string): { host: string, pathname: string | undefined } {
+function resolveServerUrl(url: string): { host: string, pathname: string | undefined, protocol: string | undefined } {
   let [maybeProtocol, maybeHost] = url.split('://');
   if (!maybeHost) {
     maybeHost = maybeProtocol;
@@ -364,9 +369,9 @@ function resolveServerUrl(url: string): { host: string, pathname: string | undef
 
   const [host, ...pathnames] = maybeHost.split('/');
   if (pathnames.length) {
-    return { host, pathname: `/${pathnames.join('/')}` };
+    return { host, pathname: `/${pathnames.join('/')}`, protocol: maybeProtocol };
   }
-  return { host, pathname: undefined };
+  return { host, pathname: undefined, protocol: maybeProtocol };
 }
 
 /**
