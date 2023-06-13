@@ -2,7 +2,6 @@ import { dump } from 'js-yaml';
 
 import { converters as firstConverters } from "./first-version";
 import { converters as secondConverters } from "./second-version";
-import { converters as thirdConverters } from "./third-version";
 
 import { serializeInput } from "./utils";
 
@@ -13,8 +12,7 @@ import type { AsyncAPIDocument, ConvertVersion, ConvertOptions, ConvertFunction 
  */
 const converters: Record<string, ConvertFunction> = {
   ...firstConverters,
-  ...secondConverters,
-  ...thirdConverters,
+  ...secondConverters
 };
 const conversionVersions = Object.keys(converters);
 
