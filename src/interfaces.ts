@@ -18,3 +18,4 @@ export type ConvertOptions = {
  * PRIVATE TYPES
  */
 export type ConvertFunction = (asyncapi: AsyncAPIDocument, options: ConvertOptions) => AsyncAPIDocument;
+

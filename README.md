@@ -52,7 +52,7 @@ channels:
 ...
 ```
 
-Convert to specific version:
+Convert to a specific version:
 
 ```sh
 asyncapi convert streetlights.yml -o streetlights2.yml -t 2.3.0
@@ -96,9 +96,8 @@ try {
       convertChannelComponents: false,
     }
   };
-
   const asyncapi = fs.readFileSync('streetlights.yml', 'utf-8')
-  console.log(convert(asyncapi, toVersion, options));
+  console.log(convert(asyncapi, toVersion));
 } catch (e) {
   console.error(e)
 }
