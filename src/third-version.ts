@@ -160,6 +160,18 @@ function convertChannelObjects(channels: Record<string, any>, asyncapi: AsyncAPI
         ...publishMessages || {},
         ...subscribeMessages || {},
       }
+
+      // Convert schema formats to union schemas
+      Object.entries(channel.messages as Record<string, any>).forEach(([_, message]) => {
+        if(message.schemaFormat !== undefined) {
+          const payloadSchema = message.payload;
+          message.payload = {
+            schemaFormat: message.schemaFormat,
+            schema: payloadSchema
+          }
+          delete message.schemaFormat;
+        }
+      });
     }
 
     if (Object.keys(operations)) {
