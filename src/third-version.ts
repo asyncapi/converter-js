@@ -156,21 +156,12 @@ function convertChannelObjects(channels: Record<string, any>, asyncapi: AsyncAPI
     }
 
     if (publishMessages || subscribeMessages) {
-      channel.messages = {
+      const allOperationMessages = {
         ...publishMessages || {},
         ...subscribeMessages || {},
       }
-
-      // Convert schema formats to union schemas
-      Object.entries(channel.messages as Record<string, any>).forEach(([_, message]) => {
-        if(message.schemaFormat !== undefined) {
-          const payloadSchema = message.payload;
-          message.payload = {
-            schemaFormat: message.schemaFormat,
-            schema: payloadSchema
-          }
-          delete message.schemaFormat;
-        }
+      channel.messages = convertMessages({
+        messages: allOperationMessages
       });
     }
 
@@ -291,6 +282,25 @@ function convertOperationObject(data: ConvertOperationObjectData, options: Requi
   return { operationId, operation: sortedOperation, messages: serializedMessages };
 }
 
+type ConvertMessagesObjectData = {
+  messages: Record<string, any>
+}
+function convertMessages(data: ConvertMessagesObjectData): Record<string, any>{
+  const messages = {...data.messages};
+  // Convert schema formats to union schemas
+  Object.entries(messages).forEach(([_, message]) => {
+    if(message.schemaFormat !== undefined) {
+      const payloadSchema = message.payload;
+      message.payload = {
+        schemaFormat: message.schemaFormat,
+        schema: payloadSchema
+      }
+      delete message.schemaFormat;
+    }
+  });
+  return messages;
+}
+
 /**
  * Convert `channels`, `servers` and `securitySchemes` in components.
  */
@@ -308,6 +318,10 @@ function convertComponents(asyncapi: AsyncAPIDocument, options: RequiredConvertV
   }
   if (isPlainObject(components.securitySchemes)) {
     components.securitySchemes = convertSecuritySchemes(components.securitySchemes);
+  }
+
+  if (isPlainObject(components.messages)) {
+    components.messages = convertMessages(components.messages);
   }
 }
 
