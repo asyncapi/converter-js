@@ -285,6 +285,9 @@ function convertOperationObject(data: ConvertOperationObjectData, options: Requi
 type ConvertMessagesObjectData = {
   messages: Record<string, any>
 }
+/**
+ * Convert messages that use custom schema format into schema union.
+ */
 function convertMessages(data: ConvertMessagesObjectData): Record<string, any>{
   const messages = {...data.messages};
   // Convert schema formats to union schemas
