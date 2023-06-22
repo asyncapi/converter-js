@@ -32,7 +32,7 @@ npm i @asyncapi/converter
 
 ### From CLI
 
-To convert an AsyncAPi document in the console needs the official [AsyncAPI CLI](https://github.com/asyncapi/cli).
+To convert an AsyncAPI document in the console needs the official [AsyncAPI CLI](https://github.com/asyncapi/cli).
 
 If you don't have CLI installed, run this command to install the CLI globally on your system:
 
@@ -51,7 +51,7 @@ channels:
 ...
 ```
 
-Convert to specific version:
+Convert to a specific version:
 
 ```sh
 asyncapi convert streetlights.yml -o streetlights2.yml -t 2.3.0
@@ -70,7 +70,7 @@ const { convert } = require('@asyncapi/converter')
 
 try {
   const asyncapi = fs.readFileSync('streetlights.yml', 'utf-8')
-  console.log(convert(asyncapi, '2.0.0'));
+  console.log(convert(asyncapi, '2.6.0'));
 } catch (e) {
   console.error(e);
 }
@@ -83,7 +83,7 @@ import { convert } from '@asyncapi/converter';
 import type { ConvertVersion, ConvertOptions } from '@asyncapi/converter';
 
 try {
-  const toVersion: ConvertVersion = '2.0.0';
+  const toVersion: ConvertVersion = '2.6.0';
   const asyncapi = fs.readFileSync('streetlights.yml', 'utf-8')
   console.log(convert(asyncapi, toVersion));
 } catch (e) {

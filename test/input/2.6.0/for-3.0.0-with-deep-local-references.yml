@@ -1,0 +1,79 @@
+asyncapi: 2.6.0
+
+info:
+  title: AsyncAPI Sample App
+  version: 1.0.1
+
+channels:
+  'lightingMeasured':
+    publish:
+      operationId: lightMeasured
+      message:
+        payload:
+          type: object
+          properties:
+            someProperty:
+              type: string
+            circularProperty:
+              $ref: '#/channels/lightingMeasured/publish/message/payload'
+  'turnOn':
+    publish:
+      message:
+        $ref: '#/components/messages/lightMeasured'
+    subscribe:
+      message:
+        oneOf:
+          - $ref: '#/components/messages/turnOnOff'
+          - messageId: customMessageId
+            payload:
+              type: object
+              properties:
+                someProperty:
+                  type: string
+                circularProperty:
+                  $ref: '#/channels/turnOn/subscribe/message/oneOf/1/payload'
+
+components:
+  channels:  
+    'someChannel':
+      publish:
+        message:
+          $ref: '#/components/messages/lightMeasured'
+      subscribe:
+        message:
+          oneOf:
+            - $ref: '#/components/messages/turnOnOff'
+            - messageId: customMessageId
+              payload:
+                type: object
+                properties:
+                  someProperty:
+                    type: string
+                  circularProperty:
+                    $ref: '#/components/channels/someChannel/subscribe/message/oneOf/1/payload'
+  messages:
+    turnOnOff:
+      summary: Command a particular streetlight to turn the lights on or off.
+      payload:
+        $ref: '#/components/schemas/turnOnOffPayload'
+  schemas:
+    turnOnOffPayload:
+      type: object
+      properties:
+        command:
+          type: string
+          enum:
+            - 'on'
+            - 'off'
+          description: Whether to turn on or off the light.
+        sentAt:
+          $ref: '#/components/schemas/sentAt'
+    sentAt:
+      type: string
+      format: date-time
+      description: Date and time when the message was sent.
+  parameters:
+    streetlightId:
+      description: The ID of the streetlight.
+      schema:
+        type: string

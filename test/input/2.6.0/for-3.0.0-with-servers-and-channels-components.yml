@@ -1,0 +1,137 @@
+asyncapi: 2.6.0
+
+info:
+  title: AsyncAPI Sample App
+  version: 1.0.1
+  description: This is a sample app.
+
+servers:
+  default:
+    url: 'api.streetlights.smartylighting.com:{port}'
+    description: Test broker
+    variables:
+      port:
+        description: Secure connection (TLS) is available through port 8883.
+        default: '1883'
+        enum:
+          - '1883'
+          - '8883'
+    protocol: mqtt
+    security:
+      - apiKey: []
+      - flows: ['write:pets']
+  referenced:
+    $ref: '#/components/servers/withProtocol'
+
+channels:
+  'smartylighting/streetlights/1/0/event/{streetlightId}/lighting/measured':
+    servers: 
+      - production
+    parameters:
+      streetlightId:
+        $ref: '#/components/parameters/streetlightId'
+    publish:
+      operationId: lightMeasured
+      message:
+        payload:
+          type: object
+  'smartylighting/streetlights/1/0/action/{streetlightId}/turn/on':
+    $ref: '#/components/channels/usedChannel'
+
+components:
+  servers: 
+    production:
+      url: 'api.streetlights.smartylighting.com:{port}/some/path'
+      description: Test broker
+      variables:
+        port:
+          description: Secure connection (TLS) is available through port 8883.
+          default: '1883'
+          enum:
+            - '1883'
+            - '8883'
+      protocol: mqtt
+      security:
+        - apiKey: []
+    withProtocol:
+      url: 'mqtt://api.streetlights.smartylighting.com:{port}/some/path'
+      description: Test broker
+      variables:
+        port:
+          description: Secure connection (TLS) is available through port 8883.
+          default: '1883'
+          enum:
+            - '1883'
+            - '8883'
+      protocol: mqtt
+      security:
+        - apiKey: []
+  channels:
+    usedChannel:
+      servers: 
+        - default
+        - production
+      parameters:
+        streetlightId:
+          $ref: '#/components/parameters/streetlightId'
+      publish:
+        message:
+          $ref: '#/components/messages/lightMeasured'
+      subscribe:
+        message:
+          oneOf:
+            - $ref: '#/components/messages/turnOnOff'
+            - messageId: customMessageId
+              payload:
+                type: object
+            - payload:
+                type: object
+            - $ref: 'https://example.com/message'
+    unusedChannel:
+      parameters:
+        streetlightId:
+          $ref: '#/components/parameters/streetlightId'
+      subscribe:
+        operationId: dimLight
+        message:
+          $ref: '#/components/messages/dimLight'
+        security:
+          - flows: ['write:pets']
+  messages:
+    lightMeasured:
+      summary: >-
+        Inform about environmental lighting conditions for a particular
+        streetlight.
+      payload:
+        $ref: '#/components/schemas/lightMeasuredPayload'
+    turnOnOff:
+      summary: Command a particular streetlight to turn the lights on or off.
+      payload:
+        $ref: '#/components/schemas/turnOnOffPayload'
+    dimLight:
+      summary: Command a particular streetlight to dim the lights.
+      payload:
+        $ref: '#/components/schemas/dimLightPayload'
+  schemas:
+    sentAt:
+      type: string
+      format: date-time
+      description: Date and time when the message was sent.
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: user
+      description: Provide your API key as the user and leave the password empty.
+    flows:
+      type: oauth2
+      flows:
+        implicit:
+          authorizationUrl: https://example.com/api/oauth/dialog
+          scopes:
+            write:pets: modify pets in your account
+            read:pets: read your pets
+  parameters:
+    streetlightId:
+      description: The ID of the streetlight.
+      schema:
+        type: string
