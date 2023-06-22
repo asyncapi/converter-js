@@ -30,7 +30,6 @@ describe('convert() - 2.X.X to 3.X.X versions', () => {
     const input = fs.readFileSync(path.resolve(__dirname, 'input', '2.6.0', 'for-3.0.0-with-custom-schema-format.yml'), 'utf8');
     const output = fs.readFileSync(path.resolve(__dirname, 'output', '3.0.0', 'from-2.6.0-with-custom-schema-format.yml'), 'utf8');
     const result = convert(input, '3.0.0');
-    console.log(result);
     assertResults(output, result);
   });
 });

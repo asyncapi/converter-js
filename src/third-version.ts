@@ -321,7 +321,9 @@ function convertComponents(asyncapi: AsyncAPIDocument, options: RequiredConvertV
   }
 
   if (isPlainObject(components.messages)) {
-    components.messages = convertMessages(components.messages);
+    components.messages = convertMessages({
+      messages: components.messages
+    });
   }
 }
 
