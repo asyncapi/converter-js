@@ -104,6 +104,7 @@ try {
 ```
 
 ## Conversion 2.x.x to 3.x.x
+> NOTE: this feature is still WIP, and is until the final release of 3.0.0
 
 Conversion to version `3.x.x` from `2.x.x` has several assumptions that should be know before converting:
 
