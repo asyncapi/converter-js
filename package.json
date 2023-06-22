@@ -8,7 +8,6 @@
 		"build": "tsc",
 		"test": "cross-env CI=true NODE_ENV=test jest --coverage",
 		"lint": "echo 'no linter configured yet'",
-		"release": "semantic-release",
 		"generate:assets": "npm run generate:readme:toc",
 		"generate:readme:toc": "markdown-toc -i README.md",
 		"bump:version": "npm --no-git-tag-version --allow-same-version version $VERSION",
