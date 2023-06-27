@@ -126,18 +126,19 @@ function convertChannelObjects(channels: Record<string, any>, asyncapi: AsyncAPI
 
     const operations: Record<string, any> = {};
     // serialize publish and subscribe Operation Objects to standalone object
-    function toStandaloneObject(type: 'subscribe' | 'publish') {
+    function toStandaloneObject(kind: 'subscribe' | 'publish') {
       let operation = channel.subscribe;
+      const operationPath = inComponents ? ['components', 'operations'] : ['operations'];
       if (isPlainObject(operation)) {
-        const { operationId, operation: newOperation, messages } = convertOperationObject({ asyncapi, kind: type, channel, channelId, oldChannelId: channelAddress, operation, inComponents }, options, context);
+        const { operationId, operation: newOperation, messages } = convertOperationObject({ asyncapi, kind, channel, channelId, oldChannelId: channelAddress, operation, inComponents }, options, context);
         if (operation.security) {
           newOperation.security = convertSecurityObject(operation.security, asyncapi);
         }
-    
-        const operationPath = inComponents ? ['components', 'operations', operationId] : ['operations', operationId];
-        context.refs.set(createRefPath(...oldPath, type), createRefPath(...operationPath));
+        operationPath.push(operationId)
+        
+        context.refs.set(createRefPath(...oldPath, kind), createRefPath(...operationPath));
         operations[operationId] = newOperation;
-        delete channel[type];
+        delete channel[kind];
         return messages;
       }
     }
@@ -220,7 +221,7 @@ function convertOperationObject(data: ConvertOperationObjectData, options: Requi
   }
 
   const message = operation.message;
-  let serializedMessages: Record<string, any> | undefined;
+  let serializedMessages: Record<string, any> = {};
   if (message) {
     delete operation.message;
 
@@ -230,36 +231,8 @@ function convertOperationObject(data: ConvertOperationObjectData, options: Requi
       oldMessagePath.unshift('components');
       newMessagePath.unshift('components');
     }
-
-    if (Array.isArray(message.oneOf)) {
-      //Message oneOf no longer exists, it's implicit by having multiple entires in the message object.
-      serializedMessages = message.oneOf.reduce((acc: Record<string, any>, current: any, index: number) => {
-        const messagePath = [...oldMessagePath, 'oneOf', index];
-        const messageId = options.idGenerator({ asyncapi, kind: 'message', key: index, path: messagePath, object: current, parentId: operationId });
-        context.refs.set(createRefPath(...messagePath), createRefPath(...newMessagePath, messageId));
-        acc[messageId] = current;
-        return acc;
-      }, {});
-    } else {
-      const messageId = options.idGenerator({ asyncapi, kind: 'message', key: 'message', path: oldMessagePath, object: message, parentId: operationId });
-      context.refs.set(createRefPath(...oldMessagePath), createRefPath(...newMessagePath, messageId));
-      serializedMessages = { [messageId]: message };
-    }
-
-    if (Object.keys(serializedMessages ?? {})) {
-      const newOperationMessages: Array<any> = [];
-      Object.keys(serializedMessages ?? {}).forEach(messageId => {
-        const messageValue = serializedMessages![messageId];
-        if (isRefObject(messageValue)) {
-          // shallow copy of JS reference
-          newOperationMessages.push({ ...messageValue });
-        } else {
-          const messagePath = [...newMessagePath, messageId];
-          newOperationMessages.push(createRefObject(...messagePath));
-        }
-      });
-      operation.messages = newOperationMessages;
-    }
+    serializedMessages = moveMessagesFromOperation(message, serializedMessages, newMessagePath, oldMessagePath, asyncapi, options, context, operationId);
+    applyMessageRefsToOperation(serializedMessages, newMessagePath, operation);
   }
 
   const sortedOperation = sortObjectKeys(
@@ -268,6 +241,44 @@ function convertOperationObject(data: ConvertOperationObjectData, options: Requi
   );
 
   return { operationId, operation: sortedOperation, messages: serializedMessages };
+}
+/**
+ * Remove all messages under operations and return an object of them.
+ */
+function moveMessagesFromOperation(message: any, serializedMessages: Record<string, any>, newMessagePath: string[], oldMessagePath: string[], asyncapi: any, options: any, context: any, operationId: string): Record<string, any> {
+  if (Array.isArray(message.oneOf)) {
+    //Message oneOf no longer exists, it's implicit by having multiple entires in the message object.
+    return serializedMessages = message.oneOf.reduce((acc: Record<string, any>, current: any, index: number) => {
+      const messagePath = [...oldMessagePath, 'oneOf', index];
+      const messageId = options.idGenerator({ asyncapi, kind: 'message', key: index, path: messagePath, object: current, parentId: operationId });
+      context.refs.set(createRefPath(...messagePath), createRefPath(...newMessagePath, messageId));
+      acc[messageId] = current;
+      return acc;
+    }, {});
+  } else {
+    const messageId = options.idGenerator({ asyncapi, kind: 'message', key: 'message', path: oldMessagePath, object: message, parentId: operationId });
+    context.refs.set(createRefPath(...oldMessagePath), createRefPath(...newMessagePath, messageId));
+    return serializedMessages = { [messageId]: message };
+  }
+}
+/**
+ * Add references of messages to operations.
+ */
+function applyMessageRefsToOperation(serializedMessages: Record<string, any>, newMessagePath: string[], operation: any) {
+  if (Object.keys(serializedMessages ?? {})) {
+    const newOperationMessages: Array<any> = [];
+    Object.keys(serializedMessages ?? {}).forEach(messageId => {
+      const messageValue = serializedMessages![messageId];
+      if (isRefObject(messageValue)) {
+        // shallow copy of JS reference
+        newOperationMessages.push({ ...messageValue });
+      } else {
+        const messagePath = [...newMessagePath, messageId];
+        newOperationMessages.push(createRefObject(...messagePath));
+      }
+    });
+    operation.messages = newOperationMessages;
+  }
 }
 
 type ConvertMessagesObjectData = {
@@ -366,7 +377,7 @@ function convertSecuritySchemeObject(original: any) {
   if (securityScheme.flows) {
     flowKinds.forEach(flow => {
       const flowScheme = securityScheme.flows[flow];
-      if (flowScheme && flowScheme.scopes) {
+      if (flowScheme?.scopes) {
         flowScheme.availableScopes = flowScheme.scopes;
         delete flowScheme.scopes;
       }
