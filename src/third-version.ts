@@ -18,7 +18,7 @@ function from__2_6_0__to__3_0_0(asyncapi: AsyncAPIDocument, options: ConvertOpti
     useChannelIdExtension: true,
     convertServerComponents: true,
     convertChannelComponents: true,
-    ...(options.v2tov3 || {}),
+    ...(options.v2tov3 ?? {}),
   } as RequiredConvertV2ToV3Options;
   v2tov3Options.idGenerator = v2tov3Options.idGenerator || idGeneratorFactory(v2tov3Options);
   const context: ConvertContext = {
@@ -98,10 +98,12 @@ function convertServerObjects(servers: Record<string, any>, asyncapi: AsyncAPIDo
   return newServers;
 }
 
+
 /**
  * Split Channel Objects to the Channel Objects and Operation Objects.
  */
 function convertChannelObjects(channels: Record<string, any>, asyncapi: AsyncAPIDocument, options: RequiredConvertV2ToV3Options, context: ConvertContext, inComponents: boolean = false) {
+  
   const newChannels: Record<string, any> = {};
   Object.entries(channels).forEach(([channelAddress, channel]) => {
     const oldPath = inComponents ? ['components', 'channels', channelAddress] : ['channels', channelAddress];
@@ -123,42 +125,29 @@ function convertChannelObjects(channels: Record<string, any>, asyncapi: AsyncAPI
     }
 
     const operations: Record<string, any> = {};
-    // serialize publish Operation Objects to standalone object
-    const publish = channel.publish;
-    let publishMessages: Record<string, any> | undefined;
-    if (isPlainObject(publish)) {
-      const { operationId, operation: newOperation, messages } = convertOperationObject({ asyncapi, kind: 'publish', channel, channelId, oldChannelId: channelAddress, operation: publish, inComponents }, options, context);
-      if (publish.security) {
-        newOperation.security = convertSecurityObject(publish.security, asyncapi);
+    // serialize publish and subscribe Operation Objects to standalone object
+    function toStandaloneObject(type: 'subscribe' | 'publish') {
+      let operation = channel.subscribe;
+      if (isPlainObject(operation)) {
+        const { operationId, operation: newOperation, messages } = convertOperationObject({ asyncapi, kind: type, channel, channelId, oldChannelId: channelAddress, operation, inComponents }, options, context);
+        if (operation.security) {
+          newOperation.security = convertSecurityObject(operation.security, asyncapi);
+        }
+    
+        const operationPath = inComponents ? ['components', 'operations', operationId] : ['operations', operationId];
+        context.refs.set(createRefPath(...oldPath, type), createRefPath(...operationPath));
+        operations[operationId] = newOperation;
+        delete channel[type];
+        return messages;
       }
-
-      const operationPath = inComponents ? ['components', 'operations', operationId] : ['operations', operationId];
-      context.refs.set(createRefPath(...oldPath, 'publish'), createRefPath(...operationPath));
-      operations[operationId] = newOperation;
-      delete channel.publish;
-      publishMessages = messages;
     }
-
-    // serialize subscribe Operation Objects to standalone object
-    const subscribe = channel.subscribe;
-    let subscribeMessages: Record<string, any> | undefined;
-    if (isPlainObject(subscribe)) {
-      const { operationId, operation: newOperation, messages } = convertOperationObject({ asyncapi, kind: 'subscribe', channel, channelId, oldChannelId: channelAddress, operation: subscribe, inComponents }, options, context);
-      if (subscribe.security) {
-        newOperation.security = convertSecurityObject(subscribe.security, asyncapi);
-      }
-
-      const operationPath = inComponents ? ['components', 'operations', operationId] : ['operations', operationId];
-      context.refs.set(createRefPath(...oldPath, 'subscribe'), createRefPath(...operationPath));
-      operations[operationId] = newOperation;
-      delete channel.subscribe;
-      subscribeMessages = messages;
-    }
+    const subscribeMessages = toStandaloneObject('subscribe');
+    const publishMessages = toStandaloneObject('publish');
 
     if (publishMessages || subscribeMessages) {
       const allOperationMessages = {
-        ...publishMessages || {},
-        ...subscribeMessages || {},
+        ...publishMessages ?? {},
+        ...subscribeMessages ?? {},
       }
       channel.messages = convertMessages({
         messages: allOperationMessages
@@ -167,19 +156,19 @@ function convertChannelObjects(channels: Record<string, any>, asyncapi: AsyncAPI
 
     if (Object.keys(operations)) {
       if (inComponents) {
-        const components = asyncapi.components = asyncapi.components || {};
-        components.operations = { ...components.operations || {}, ...operations };
+        const components = asyncapi.components = asyncapi.components ?? {};
+        components.operations = { ...components.operations ?? {}, ...operations };
 
         // if given component is used in the `channels` object then create references for operations in the `operations` object
-        if (channelIsUsed(asyncapi.channels || {}, oldPath)) {
+        if (channelIsUsed(asyncapi.channels ?? {}, oldPath)) {
           const referencedOperations = Object.keys(operations).reduce((acc, current) => {
             acc[current] = createRefObject('components', 'operations', current);
             return acc;
           }, {} as Record<string, any>);
-          asyncapi.operations = { ...asyncapi.operations || {}, ...referencedOperations };
+          asyncapi.operations = { ...asyncapi.operations ?? {}, ...referencedOperations };
         }
       } else {
-        asyncapi.operations = { ...asyncapi.operations || {}, ...operations };
+        asyncapi.operations = { ...asyncapi.operations ?? {}, ...operations };
       }
     }
 
@@ -201,10 +190,10 @@ type ConvertOperationObjectData = {
   inComponents: boolean;
 }
 /**
- * Points to the connected channel and spli messages for channel
+ * Points to the connected channel and split messages for channel
  */
 function convertOperationObject(data: ConvertOperationObjectData, options: RequiredConvertV2ToV3Options, context: ConvertContext): { operationId: string, operation: any, messages?: Record<string, any> } {
-  const { asyncapi, channel, channelId, oldChannelId, kind, inComponents } = data;
+  const { asyncapi, channelId, oldChannelId, kind, inComponents } = data;
   const operation = { ...data.operation };
 
   const oldChannelPath = ['channels', oldChannelId];
@@ -236,15 +225,14 @@ function convertOperationObject(data: ConvertOperationObjectData, options: Requi
     delete operation.message;
 
     const oldMessagePath = ['channels', oldChannelId, kind, 'message'];
-    if (inComponents) {
-      oldMessagePath.unshift('components');
-    }
     const newMessagePath = ['channels', channelId, 'messages'];
     if (inComponents) {
+      oldMessagePath.unshift('components');
       newMessagePath.unshift('components');
     }
 
     if (Array.isArray(message.oneOf)) {
+      //Message oneOf no longer exists, it's implicit by having multiple entires in the message object.
       serializedMessages = message.oneOf.reduce((acc: Record<string, any>, current: any, index: number) => {
         const messagePath = [...oldMessagePath, 'oneOf', index];
         const messageId = options.idGenerator({ asyncapi, kind: 'message', key: index, path: messagePath, object: current, parentId: operationId });
@@ -258,9 +246,9 @@ function convertOperationObject(data: ConvertOperationObjectData, options: Requi
       serializedMessages = { [messageId]: message };
     }
 
-    if (Object.keys(serializedMessages || {})) {
+    if (Object.keys(serializedMessages ?? {})) {
       const newOperationMessages: Array<any> = [];
-      Object.keys(serializedMessages || {}).forEach(messageId => {
+      Object.keys(serializedMessages ?? {}).forEach(messageId => {
         const messageValue = serializedMessages![messageId];
         if (isRefObject(messageValue)) {
           // shallow copy of JS reference
@@ -468,7 +456,7 @@ function replaceRef(ref: string, refs: ConvertContext['refs']): string | undefin
 function idGeneratorFactory(options: ConvertV2ToV3Options): ConvertV2ToV3Options['idGenerator'] {
   const useChannelIdExtension = options.useChannelIdExtension;
   return (data: Parameters<Exclude<ConvertV2ToV3Options['idGenerator'], undefined>>[0]): string => {
-    const { asyncapi, kind, object, path, key, parentId } = data;
+    const { asyncapi, kind, object, key, parentId } = data;
 
     switch (kind) {
       case 'channel': {
@@ -494,7 +482,7 @@ function idGeneratorFactory(options: ConvertV2ToV3Options): ConvertV2ToV3Options
       case 'message': {
         if (isRefObject(object)) {
           const possibleMessage = getValueByRef(asyncapi, object.$ref);
-          if (possibleMessage && possibleMessage.messageId) {
+          if (possibleMessage?.messageId) {
             const messageId = possibleMessage.messageId;
             return messageId;
           }

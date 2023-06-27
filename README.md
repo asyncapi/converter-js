@@ -159,7 +159,7 @@ Conversion to version `3.x.x` from `2.x.x` has several assumptions that should b
 
 - Security requirements that use scopes are defined in the appropriate places inline, the rest as a reference to the `components.securitySchemes` objects.
 - If servers are defined at the channel level, they are converted as references to the corresponding objects defined in the `servers` field.
-- Channels and servers defined in components are also converted (unless configured - see [examples](#in-js)).
+- Channels and servers defined in components are also converted (unless configured otherwise).
 
 ## Known missing features
 
