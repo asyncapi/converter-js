@@ -171,30 +171,43 @@ function convertChannelObjects(channels: Record<string, any>, asyncapi: AsyncAPI
       });
     }
 
-    if (Object.keys(operations)) {
-      if (inComponents) {
-        const components = asyncapi.components = asyncapi.components ?? {};
-        components.operations = { ...components.operations ?? {}, ...operations };
-
-        // if given component is used in the `channels` object then create references for operations in the `operations` object
-        if (channelIsUsed(asyncapi.channels ?? {}, oldPath)) {
-          const referencedOperations = Object.keys(operations).reduce((acc, current) => {
-            acc[current] = createRefObject('components', 'operations', current);
-            return acc;
-          }, {} as Record<string, any>);
-          asyncapi.operations = { ...asyncapi.operations ?? {}, ...referencedOperations };
-        }
-      } else {
-        asyncapi.operations = { ...asyncapi.operations ?? {}, ...operations };
-      }
-    }
-
+    setOperationsOnRoot({operations, inComponents, asyncapi, oldPath});
     newChannels[channelId] = sortObjectKeys(
       channel, 
       ['address', 'messages', 'title', 'summary', 'description', 'servers', 'parameters', 'tags', 'externalDocs', 'bindings'],
     );
   });
   return newChannels;
+}
+
+type SetOperationsOnRootData = {
+  operations: any,
+  inComponents: boolean,
+  asyncapi: AsyncAPIDocument,
+  oldPath: string[]
+}
+/**
+ * Assign the operations to the root AsyncAPI object.
+ */
+function setOperationsOnRoot(data: SetOperationsOnRootData){
+  const {operations, inComponents, asyncapi, oldPath} = data; 
+  if (Object.keys(operations)) {
+    if (inComponents) {
+      const components = asyncapi.components = asyncapi.components ?? {};
+      components.operations = { ...components.operations ?? {}, ...operations };
+
+      // if given component is used in the `channels` object then create references for operations in the `operations` object
+      if (channelIsUsed(asyncapi.channels ?? {}, oldPath)) {
+        const referencedOperations = Object.keys(operations).reduce((acc, current) => {
+          acc[current] = createRefObject('components', 'operations', current);
+          return acc;
+        }, {} as Record<string, any>);
+        asyncapi.operations = { ...asyncapi.operations ?? {}, ...referencedOperations };
+      }
+    } else {
+      asyncapi.operations = { ...asyncapi.operations ?? {}, ...operations };
+    }
+  }
 }
 
 type ConvertOperationObjectData = {
@@ -277,14 +290,14 @@ function moveMessagesFromOperation(message: any, newMessagePath: string[], oldMe
     return { [messageId]: message };
   }
 }
+
 /**
  * Add references of messages to operations.
  */
 function applyMessageRefsToOperation(serializedMessages: Record<string, any>, newMessagePath: string[], operation: any) {
-  if (Object.keys(serializedMessages ?? {})) {
+  if (Object.keys(serializedMessages ?? {}).length > 0 ) {
     const newOperationMessages: Array<any> = [];
-    Object.keys(serializedMessages ?? {}).forEach(messageId => {
-      const messageValue = serializedMessages![messageId];
+    Object.entries(serializedMessages).forEach(([messageId, messageValue]) => {
       if (isRefObject(messageValue)) {
         // shallow copy of JS reference
         newOperationMessages.push({ ...messageValue });
