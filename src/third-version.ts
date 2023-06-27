@@ -98,12 +98,31 @@ function convertServerObjects(servers: Record<string, any>, asyncapi: AsyncAPIDo
   return newServers;
 }
 
+/**
+ * Convert operation part of channels into standalone operations
+ */
+function toStandaloneObject(kind: 'subscribe' | 'publish', channel: any, asyncapi: any, operations: any, context:any, inComponents: boolean, channelId: string, channelAddress: string, options: any, oldPath: string[]): Record<string, any> {
+  let operation = channel[kind];
+  const operationPath = inComponents ? ['components', 'operations'] : ['operations'];
+  if (isPlainObject(operation)) {
+    const { operationId, operation: newOperation, messages } = convertOperationObject({ asyncapi, kind, channel, channelId, oldChannelId: channelAddress, operation, inComponents }, options, context);
+    if (operation.security) {
+      newOperation.security = convertSecurityObject(operation.security, asyncapi);
+    }
+    operationPath.push(operationId);
+    
+    context.refs.set(createRefPath(...oldPath, kind), createRefPath(...operationPath));
+    operations[operationId] = newOperation;
+    delete channel[kind];
+    return messages ?? {};
+  }
+  return {};
+}
 
 /**
  * Split Channel Objects to the Channel Objects and Operation Objects.
  */
 function convertChannelObjects(channels: Record<string, any>, asyncapi: AsyncAPIDocument, options: RequiredConvertV2ToV3Options, context: ConvertContext, inComponents: boolean = false) {
-  
   const newChannels: Record<string, any> = {};
   Object.entries(channels).forEach(([channelAddress, channel]) => {
     const oldPath = inComponents ? ['components', 'channels', channelAddress] : ['channels', channelAddress];
@@ -126,29 +145,13 @@ function convertChannelObjects(channels: Record<string, any>, asyncapi: AsyncAPI
 
     const operations: Record<string, any> = {};
     // serialize publish and subscribe Operation Objects to standalone object
-    function toStandaloneObject(kind: 'subscribe' | 'publish') {
-      let operation = channel.subscribe;
-      const operationPath = inComponents ? ['components', 'operations'] : ['operations'];
-      if (isPlainObject(operation)) {
-        const { operationId, operation: newOperation, messages } = convertOperationObject({ asyncapi, kind, channel, channelId, oldChannelId: channelAddress, operation, inComponents }, options, context);
-        if (operation.security) {
-          newOperation.security = convertSecurityObject(operation.security, asyncapi);
-        }
-        operationPath.push(operationId)
-        
-        context.refs.set(createRefPath(...oldPath, kind), createRefPath(...operationPath));
-        operations[operationId] = newOperation;
-        delete channel[kind];
-        return messages;
-      }
-    }
-    const subscribeMessages = toStandaloneObject('subscribe');
-    const publishMessages = toStandaloneObject('publish');
+    const publishMessages = toStandaloneObject('publish', channel, asyncapi, operations, context, inComponents, channelId, channelAddress, options, oldPath);
+    const subscribeMessages = toStandaloneObject('subscribe', channel, asyncapi, operations, context, inComponents, channelId, channelAddress, options, oldPath);
 
     if (publishMessages || subscribeMessages) {
       const allOperationMessages = {
-        ...publishMessages ?? {},
-        ...subscribeMessages ?? {},
+        ...publishMessages,
+        ...subscribeMessages,
       }
       channel.messages = convertMessages({
         messages: allOperationMessages
