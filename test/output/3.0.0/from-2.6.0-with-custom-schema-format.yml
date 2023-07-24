@@ -1,0 +1,75 @@
+asyncapi: 3.0.0
+id: 'urn:example:com:smartylighting:streetlights:server'
+info:
+  title: AsyncAPI Sample App
+  version: 1.0.1
+  description: This is a sample app.
+  termsOfService: 'https://asyncapi.com/terms/'
+  contact:
+    name: API Support
+    url: 'https://www.asyncapi.com/support'
+    email: support@asyncapi.org
+  license:
+    name: Apache 2.0
+    url: 'https://www.apache.org/licenses/LICENSE-2.0.html'
+  tags:
+    - name: e-commerce
+    - name: another-tag
+      description: Description...
+  externalDocs:
+    description: Find more info here
+    url: 'https://www.asyncapi.com'
+defaultContentType: application/json
+channels:
+  'smartylighting/streetlights/1/0/event/{streetlightId}/lighting/measured':
+    address: 'smartylighting/streetlights/1/0/event/{streetlightId}/lighting/measured'
+    messages:
+      lightMeasured.message:
+        payload:
+          schemaFormat: application/vnd.apache.avro;version=1.9.0
+          schema:
+            type: record
+            name: User
+            namespace: com.company
+            doc: User information
+            fields:
+              - name: displayName
+                type: string
+              - name: email
+                type: string
+              - name: age
+                type: int
+    parameters:
+      streetlightId:
+        $ref: '#/components/parameters/streetlightId'
+operations:
+  lightMeasured:
+    action: receive
+    channel:
+      $ref: >-
+        #/channels/smartylighting~1streetlights~11~10~1event~1{streetlightId}~1lighting~1measured
+    messages:
+      - $ref: >-
+          #/channels/smartylighting~1streetlights~11~10~1event~1{streetlightId}~1lighting~1measured/messages/lightMeasured.message
+components:
+  messages:
+    lightMeasured:
+      payload:
+        schemaFormat: application/vnd.apache.avro;version=1.9.0
+        schema:
+          type: record
+          name: User
+          namespace: com.company
+          doc: User information
+          fields:
+            - name: displayName
+              type: string
+            - name: email
+              type: string
+            - name: age
+              type: int
+  parameters:
+    streetlightId:
+      description: The ID of the streetlight.
+      schema:
+        type: string
