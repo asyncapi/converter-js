@@ -409,7 +409,7 @@ function convertParameter(parameter: any): any {
     defaultValues === null ? null : {default: defaultValues},
     description === null ? null : {description},
     examples === null ? null : {examples},
-    examples === null ? null : {location}
+    location === null ? null : {location}
   );
 }
 /**
