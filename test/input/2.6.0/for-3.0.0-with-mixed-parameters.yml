@@ -1,0 +1,54 @@
+asyncapi: 2.6.0
+channels:
+  '{enum}/{default}/{description}/{examples}/{location}/{mixed}':
+    publish:
+      operationId: lightMeasured
+      message:
+        payload:
+          type: string
+    parameters:
+      enum:
+        $ref: '#/components/parameters/enum'
+      default:
+        $ref: '#/components/parameters/default'
+      description:
+        $ref: '#/components/parameters/description'
+      examples:
+        $ref: '#/components/parameters/examples'
+      location:
+        $ref: '#/components/parameters/location'
+      mixed:
+        $ref: '#/components/parameters/mixed'
+components:
+  parameters:
+    enum:
+      schema:
+        type: string
+        enum: ["test"]
+    default:
+      schema:
+        type: string
+        default: "test"
+    description:
+      description: Just a test description
+      schema: 
+        description: Just a test description 2
+        type: string
+    examples:
+      schema:
+        type: string
+        examples: ["test"]
+    location:
+      location: "$message.payload"
+      schema:
+        type: string
+    mixed:
+      location: "$message.payload"
+      description: Just a test description
+      schema:
+        type: string
+        enum: ["test"]
+        default: "test"
+        description: Just a test description 2
+        examples: ["test"]
+      x-custom-extension: "test"

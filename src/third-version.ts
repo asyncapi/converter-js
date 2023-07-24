@@ -156,6 +156,11 @@ function convertChannelObjects(channels: Record<string, any>, asyncapi: AsyncAPI
       channel.servers = servers.map((serverName: string) => createRefObject('servers', serverName));
     }
 
+    //Change parameter formats
+    if (isPlainObject(channel.parameters)) {
+      channel.parameters = convertParameters(channel.parameters);
+    }
+
     const operations: Record<string, any> = {};
     // serialize publish and subscribe Operation Objects to standalone object
     const publishMessages = toStandaloneOperation({kind: 'publish', channel, asyncapi, operations, context, inComponents, channelId, channelAddress, options, oldPath});
@@ -356,8 +361,57 @@ function convertComponents(asyncapi: AsyncAPIDocument, options: RequiredConvertV
       messages: components.messages
     });
   }
-}
 
+  if (isPlainObject(components.parameters)) {
+    components.parameters = convertParameters(components.parameters);
+  }
+}
+/**
+ * Convert all parameters to the new v3 format
+ */
+function convertParameters(parameters: Record<string, any>): Record<string, any> {
+  const newParameters: Record<string, any> = {};
+  Object.entries(parameters).forEach(([name, parameter]) => {
+    newParameters[name] = convertParameter(parameter);
+  });
+  return newParameters;
+}
+/**
+ * Convert the old v2 parameter object to v3.
+ * 
+ * Ensure that extensions and references are all kept as is.
+ * 
+ * Does not include extensions from schema.
+ */
+function convertParameter(parameter: any): any {
+  const ref = parameter['$ref'] ?? null;
+  if(ref !== null) {
+    return {
+      $ref: ref
+    }
+  }
+
+  const enumValues = parameter.schema?.enum ?? null;
+  const defaultValues = parameter.schema?.default ?? null;
+  const description = parameter.description ?? parameter.schema?.description ?? null;
+  const examples = parameter.schema?.examples ?? null;
+  const location = parameter.location ?? null;
+
+  //Make sure we keep parameter extensions
+  const v2ParameterObjectProperties = ["location", "schema", "description"];
+  const v2ParameterObjectExtensions = Object.entries(parameter).filter(([key,]) => {
+    return !v2ParameterObjectProperties.includes(key);
+  });
+
+  //Return the new v3 parameter object
+  return Object.assign({...v2ParameterObjectExtensions},
+    enumValues === null ? null : {enum: enumValues},
+    defaultValues === null ? null : {default: defaultValues},
+    description === null ? null : {description},
+    examples === null ? null : {examples},
+    location === null ? null : {location}
+  );
+}
 /**
  * Convert `channels`, `servers` and `securitySchemes` in components.
  */
