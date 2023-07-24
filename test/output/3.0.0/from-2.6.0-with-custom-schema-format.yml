@@ -71,5 +71,3 @@ components:
   parameters:
     streetlightId:
       description: The ID of the streetlight.
-      schema:
-        type: string
