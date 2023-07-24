@@ -384,24 +384,24 @@ function convertParameters(parameters: Record<string, any>): Record<string, any>
  * Does not include extensions from schema.
  */
 function convertParameter(parameter: any): any {
-  const enumValues = parameter.schema?.enum ?? null;
-  const defaultValues = parameter.schema?.default ?? null;
-  const description = parameter.description ?? parameter.schema?.description ?? null;
-  const examples = parameter.schema?.examples ?? null;
-  const location = parameter.location ?? null;
   const ref = parameter['$ref'] ?? null;
-
-  //Make sure we keep parameter extensions
-  const v2ParameterObjectProperties = ["location", "schema", "description", "$ref"];
-  const v2ParameterObjectExtensions = Object.entries(parameter).filter(([key,]) => {
-    return !v2ParameterObjectProperties.includes(key);
-  });
-
   if(ref !== null) {
     return {
       $ref: ref
     }
   }
+
+  const enumValues = parameter.schema?.enum ?? null;
+  const defaultValues = parameter.schema?.default ?? null;
+  const description = parameter.description ?? parameter.schema?.description ?? null;
+  const examples = parameter.schema?.examples ?? null;
+  const location = parameter.location ?? null;
+
+  //Make sure we keep parameter extensions
+  const v2ParameterObjectProperties = ["location", "schema", "description"];
+  const v2ParameterObjectExtensions = Object.entries(parameter).filter(([key,]) => {
+    return !v2ParameterObjectProperties.includes(key);
+  });
 
   //Return the new v3 parameter object
   return Object.assign({...v2ParameterObjectExtensions},
