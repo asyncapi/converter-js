@@ -96,7 +96,7 @@ try {
 
 > **NOTE**: This feature is still WIP, and is until the final release of `3.0.0`.
 
-Conversion to version `3.x.x` from `2.x.x` has several assumptions that should be know before converting:
+Conversion to version `3.x.x` from `2.x.x` has several assumptions that should be known before converting:
 
 - The input must be valid AsyncAPI document.
 - External references are not resolved and converted, they remain untouched, even if they are incorrect.
@@ -164,6 +164,35 @@ Conversion to version `3.x.x` from `2.x.x` has several assumptions that should b
 ## Known missing features
 
 * When converting from 1.x to 2.x, Streaming APIs (those using `stream` instead of `topics` or `events`) are converted correctly but information about framing type and delimiter is missing until a [protocolInfo](https://github.com/asyncapi/extensions-catalog/issues/1) for that purpose is created.
+* When converting from 2.x to 3.x, and `parameter.schema` is defined with a reference, it will NOT look into the schema reference and include any relevant keywords for the v3 parameter. It will just create an empty parameter but leave the schema in the components section as is.
+  ```yaml
+  # 2.x.x
+  channels:
+    "{myParameter}":
+      parameters: 
+        myParameter: 
+          schema: 
+            $ref: "#/components/schemas/mySchema"
+  components: 
+    schemas:
+      mySchema:
+        enum: ["test"]
+        default: "test"
+        examples: ["test"]
+
+  # 3.0.0
+  channels:
+    "{myParameter}":
+      parameters: 
+        myParameter: {}
+
+  components: 
+    schemas:
+      mySchema:
+        enum: ["test"]
+        default: "test"
+        examples: ["test"]
+  ```
 
 ## Development
 
