@@ -9,6 +9,7 @@ export type ConvertV2ToV3Options = {
   useChannelIdExtension?: boolean;
   convertServerComponents?: boolean;
   convertChannelComponents?: boolean;
+  failOnParameterReference?: boolean;
 }
 export type ConvertOptions = {
   v2tov3?: ConvertV2ToV3Options;

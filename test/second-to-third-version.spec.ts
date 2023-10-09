@@ -32,4 +32,16 @@ describe('convert() - 2.X.X to 3.X.X versions', () => {
     const result = convert(input, '3.0.0');
     assertResults(output, result);
   });
+
+  it('should throw exception when parameter encountered with failOnParameterReference=true', () => {
+    const input = fs.readFileSync(path.resolve(__dirname, 'input', '2.6.0', 'for-3.0.0-with-reference-parameter.yml'), 'utf8');
+    expect(() => {convert(input, '3.0.0', {v2tov3: {failOnParameterReference: true}})}).toThrowError('Could not convert parameter object because the `.schema` property was a reference. This have to be changed manually if you want any of the properties included. The reference was #/components/schemas/sentAt');
+  });
+
+  it('should handle parameter object', () => {
+    const input = fs.readFileSync(path.resolve(__dirname, 'input', '2.6.0', 'for-3.0.0-with-reference-parameter.yml'), 'utf8');
+    const output = fs.readFileSync(path.resolve(__dirname, 'output', '3.0.0', 'from-2.6.0-with-reference-parameter.yml'), 'utf8');
+    const result = convert(input, '3.0.0', {v2tov3: {failOnParameterReference: false}});
+    assertResults(output, result);
+  });
 });

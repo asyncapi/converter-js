@@ -18,6 +18,7 @@ function from__2_6_0__to__3_0_0(asyncapi: AsyncAPIDocument, options: ConvertOpti
     useChannelIdExtension: true,
     convertServerComponents: true,
     convertChannelComponents: true,
+    failOnParameterReference: false,
     ...(options.v2tov3 ?? {}),
   } as RequiredConvertV2ToV3Options;
   v2tov3Options.idGenerator = v2tov3Options.idGenerator || idGeneratorFactory(v2tov3Options);
@@ -158,7 +159,7 @@ function convertChannelObjects(channels: Record<string, any>, asyncapi: AsyncAPI
 
     //Change parameter formats
     if (isPlainObject(channel.parameters)) {
-      channel.parameters = convertParameters(channel.parameters);
+      channel.parameters = convertParameters(channel.parameters, options);
     }
 
     const operations: Record<string, any> = {};
@@ -363,16 +364,16 @@ function convertComponents(asyncapi: AsyncAPIDocument, options: RequiredConvertV
   }
 
   if (isPlainObject(components.parameters)) {
-    components.parameters = convertParameters(components.parameters);
+    components.parameters = convertParameters(components.parameters, options);
   }
 }
 /**
  * Convert all parameters to the new v3 format
  */
-function convertParameters(parameters: Record<string, any>): Record<string, any> {
+function convertParameters(parameters: Record<string, any>, options: RequiredConvertV2ToV3Options): Record<string, any> {
   const newParameters: Record<string, any> = {};
   Object.entries(parameters).forEach(([name, parameter]) => {
-    newParameters[name] = convertParameter(parameter);
+    newParameters[name] = convertParameter(parameter, options);
   });
   return newParameters;
 }
@@ -383,7 +384,7 @@ function convertParameters(parameters: Record<string, any>): Record<string, any>
  * 
  * Does not include extensions from schema.
  */
-function convertParameter(parameter: any): any {
+function convertParameter(parameter: any, options: RequiredConvertV2ToV3Options): any {
   const ref = parameter['$ref'] ?? null;
   if(ref !== null) {
     return {
@@ -392,7 +393,11 @@ function convertParameter(parameter: any): any {
   }
 
   if(parameter.schema?.$ref) {
-    console.error('Could not convert parameter object because the `.schema` property was a reference. This have to be changed manually if you want any of the properties included. The reference was ' + parameter.schema?.$ref);
+    const errorMessage = 'Could not convert parameter object because the `.schema` property was a reference. This have to be changed manually if you want any of the properties included. The reference was ' + parameter.schema?.$ref;
+    if(options.failOnParameterReference === true) {
+      throw new Error(errorMessage);
+    }
+    console.error(errorMessage);
   }
 
   const enumValues = parameter.schema?.enum ?? null;
@@ -416,6 +421,7 @@ function convertParameter(parameter: any): any {
     location === null ? null : {location}
   );
 }
+
 /**
  * Convert `channels`, `servers` and `securitySchemes` in components.
  */
