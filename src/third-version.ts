@@ -409,13 +409,13 @@ function convertParameter(parameter: any, options: RequiredConvertV2ToV3Options)
   });
 
   //Return the new v3 parameter object
-  return Object.assign({...v2ParameterObjectExtensions},
-    enumValues === null ? null : {enum: enumValues},
-    defaultValues === null ? null : {default: defaultValues},
-    description === null ? null : {description},
-    examples === null ? null : {examples},
-    location === null ? null : {location}
-  );
+  return {...v2ParameterObjectExtensions,
+    ...(enumValues === null ? null : {enum: enumValues}),
+    ...(defaultValues === null ? null : {default: defaultValues}),
+    ...(description === null ? null : {description}),
+    ...(examples === null ? null : {examples}),
+    ...(location === null ? null : {location})
+  };
 }
 
 /**
