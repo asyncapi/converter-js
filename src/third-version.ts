@@ -393,11 +393,7 @@ function convertParameter(parameter: any, options: RequiredConvertV2ToV3Options)
   }
 
   if(parameter.schema?.$ref) {
-    const errorMessage = 'Could not convert parameter object because the `.schema` property was a reference. This have to be changed manually if you want any of the properties included. The reference was ' + parameter.schema?.$ref;
-    if(options.failOnParameterReference === true) {
-      throw new Error(errorMessage);
-    }
-    console.error(errorMessage);
+    console.error('Could not convert parameter object because the `.schema` property was a reference. This have to be changed manually if you want any of the properties included. The reference was ' + parameter.schema?.$ref);
   }
 
   const enumValues = parameter.schema?.enum ?? null;
