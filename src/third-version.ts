@@ -159,7 +159,7 @@ function convertChannelObjects(channels: Record<string, any>, asyncapi: AsyncAPI
 
     //Change parameter formats
     if (isPlainObject(channel.parameters)) {
-      channel.parameters = convertParameters(channel.parameters, options);
+      channel.parameters = convertParameters(channel.parameters);
     }
 
     const operations: Record<string, any> = {};
@@ -364,19 +364,20 @@ function convertComponents(asyncapi: AsyncAPIDocument, options: RequiredConvertV
   }
 
   if (isPlainObject(components.parameters)) {
-    components.parameters = convertParameters(components.parameters, options);
+    components.parameters = convertParameters(components.parameters);
   }
 }
 /**
  * Convert all parameters to the new v3 format
  */
-function convertParameters(parameters: Record<string, any>, options: RequiredConvertV2ToV3Options): Record<string, any> {
+function convertParameters(parameters: Record<string, any>): Record<string, any> {
   const newParameters: Record<string, any> = {};
   Object.entries(parameters).forEach(([name, parameter]) => {
-    newParameters[name] = convertParameter(parameter, options);
+    newParameters[name] = convertParameter(parameter);
   });
   return newParameters;
 }
+
 /**
  * Convert the old v2 parameter object to v3.
  * 
@@ -384,7 +385,7 @@ function convertParameters(parameters: Record<string, any>, options: RequiredCon
  * 
  * Does not include extensions from schema.
  */
-function convertParameter(parameter: any, options: RequiredConvertV2ToV3Options): any {
+function convertParameter(parameter: any): any {
   const ref = parameter['$ref'] ?? null;
   if(ref !== null) {
     return {
@@ -393,14 +394,17 @@ function convertParameter(parameter: any, options: RequiredConvertV2ToV3Options)
   }
 
   if(parameter.schema?.$ref) {
-    console.error('Could not convert parameter object because the `.schema` property was a reference. This have to be changed manually if you want any of the properties included. The reference was ' + parameter.schema?.$ref);
+    console.warn('Could not convert parameter object because the `.schema` property was a reference.\nThis have to be changed manually if you want any of the properties included, it will be converted to a default parameter. The reference was ' + parameter.schema?.$ref);
   }
 
   const enumValues = parameter.schema?.enum ?? null;
+  const constValue = parameter.schema?.const ?? null;
   const defaultValues = parameter.schema?.default ?? null;
   const description = parameter.description ?? parameter.schema?.description ?? null;
   const examples = parameter.schema?.examples ?? null;
   const location = parameter.location ?? null;
+  
+  reportUnsupportedParameterValues(parameter.schema);
 
   //Make sure we keep parameter extensions
   const v2ParameterObjectProperties = ["location", "schema", "description"];
@@ -411,11 +415,28 @@ function convertParameter(parameter: any, options: RequiredConvertV2ToV3Options)
   //Return the new v3 parameter object
   return {...v2ParameterObjectExtensions,
     ...(enumValues === null ? null : {enum: enumValues}),
+    ...(constValue === null ? null : {enum: [constValue]}),
     ...(defaultValues === null ? null : {default: defaultValues}),
     ...(description === null ? null : {description}),
     ...(examples === null ? null : {examples}),
     ...(location === null ? null : {location})
   };
+}
+
+/**
+ * This function makes sure we complain if a parameter schema uses now unsupported properties
+ */
+function reportUnsupportedParameterValues(schema: any) {
+  if(schema === undefined) return;
+  const excessProperties = Object.entries(schema).filter((([propertyName,]) => {
+    return !['$ref', 'enum', 'const', 'default', 'examples', 'description'].includes(propertyName);
+  }));
+  if(excessProperties.length > 0) {
+    const listOfProperties = excessProperties.map(([propertyName, property]) => {
+      return `- schema.${propertyName} with value: ${JSON.stringify(property)} are no longer supported`
+    })
+    console.warn(`Found properties in parameter schema that are no longer supported and will be ignored by the converter.\n${listOfProperties.join('\n')}`);
+  }
 }
 
 /**

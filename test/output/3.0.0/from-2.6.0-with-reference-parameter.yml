@@ -3,8 +3,8 @@ info:
   title: AsyncAPI Sample App
   version: 1.0.1
 channels:
-  'lightingMeasured/{parameter}':
-    address: 'lightingMeasured/{parameter}'
+  'lightingMeasured/{parameter}/{parameter2}':
+    address: 'lightingMeasured/{parameter}/{parameter2}'
     messages:
       lightMeasured.message:
         payload:
@@ -14,14 +14,15 @@ channels:
               type: string
     parameters:
       parameter: {}
+      parameter2: {}
 operations:
   lightMeasured:
     action: receive
     channel:
-      $ref: '#/channels/lightingMeasured~1{parameter}'
+      $ref: '#/channels/lightingMeasured~1{parameter}~1{parameter2}'
     messages:
       - $ref: >-
-          #/channels/lightingMeasured~1{parameter}/messages/lightMeasured.message
+          #/channels/lightingMeasured~1{parameter}~1{parameter2}/messages/lightMeasured.message
 components:
   schemas:
     sentAt:
