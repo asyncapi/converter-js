@@ -394,7 +394,7 @@ function convertParameter(parameter: any): any {
   }
 
   if(parameter.schema?.$ref) {
-    console.warn('Could not convert parameter object because the `.schema` property was a reference.\nThis have to be changed manually if you want any of the properties included, it will be converted to a default parameter. The reference was ' + parameter.schema?.$ref);
+    console.warn('Could not convert parameter object because the `.schema` property was a reference.\nThis have to be changed manually if you want any of the properties included. For now your parameter is an empty object after conversion. The reference was ' + parameter.schema?.$ref);
   }
 
   const enumValues = parameter.schema?.enum ?? null;
