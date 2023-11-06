@@ -325,6 +325,7 @@ function convertMessages(data: ConvertMessagesObjectData): Record<string, any>{
   const messages = {...data.messages};
   // Convert schema formats to union schemas
   Object.entries(messages).forEach(([_, message]) => {
+    delete message.messageId;
     if(message.schemaFormat !== undefined) {
       const payloadSchema = message.payload;
       message.payload = {
