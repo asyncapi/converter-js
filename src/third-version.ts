@@ -435,7 +435,7 @@ function reportUnsupportedParameterValues(schema: any) {
     const listOfProperties = excessProperties.map(([propertyName, property]) => {
       return `- schema.${propertyName} with value: ${JSON.stringify(property)} are no longer supported`
     })
-    console.warn(`Found properties in parameter schema that are no longer supported and will be ignored by the converter.\n${listOfProperties.join('\n')}`);
+    console.warn(`Found properties in parameter schema that are no longer supported. Conversion completes with empty parameter object.\n${listOfProperties.join('\n')}`);
   }
 }
 
