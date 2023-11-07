@@ -1,0 +1,31 @@
+asyncapi: 3.0.0
+info:
+  title: AsyncAPI Sample App
+  version: 1.0.1
+channels:
+  'lightingMeasured/{parameter}/{parameter2}':
+    address: 'lightingMeasured/{parameter}/{parameter2}'
+    messages:
+      lightMeasured.message:
+        payload:
+          type: object
+          properties:
+            someProperty:
+              type: string
+    parameters:
+      parameter: {}
+      parameter2: {}
+operations:
+  lightMeasured:
+    action: receive
+    channel:
+      $ref: '#/channels/lightingMeasured~1{parameter}~1{parameter2}'
+    messages:
+      - $ref: >-
+          #/channels/lightingMeasured~1{parameter}~1{parameter2}/messages/lightMeasured.message
+components:
+  schemas:
+    sentAt:
+      type: string
+      format: date-time
+      description: Date and time when the message was sent.

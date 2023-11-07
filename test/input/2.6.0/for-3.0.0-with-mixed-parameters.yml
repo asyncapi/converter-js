@@ -19,7 +19,14 @@ channels:
         $ref: '#/components/parameters/location'
       mixed:
         $ref: '#/components/parameters/mixed'
+      schemaRef:
+        schema: 
+          $ref: '#/components/schemas/schemaParameter'
 components:
+  schemas: 
+    schemaParameter:
+      type: string
+      enum: ["test"]
   parameters:
     enum:
       schema:

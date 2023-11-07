@@ -18,6 +18,7 @@ function from__2_6_0__to__3_0_0(asyncapi: AsyncAPIDocument, options: ConvertOpti
     useChannelIdExtension: true,
     convertServerComponents: true,
     convertChannelComponents: true,
+    failOnParameterReference: false,
     ...(options.v2tov3 ?? {}),
   } as RequiredConvertV2ToV3Options;
   v2tov3Options.idGenerator = v2tov3Options.idGenerator || idGeneratorFactory(v2tov3Options);
@@ -377,6 +378,7 @@ function convertParameters(parameters: Record<string, any>): Record<string, any>
   });
   return newParameters;
 }
+
 /**
  * Convert the old v2 parameter object to v3.
  * 
@@ -392,11 +394,18 @@ function convertParameter(parameter: any): any {
     }
   }
 
+  if(parameter.schema?.$ref) {
+    console.warn('Could not convert parameter object because the `.schema` property was a reference.\nThis have to be changed manually if you want any of the properties included. For now your parameter is an empty object after conversion. The reference was ' + parameter.schema?.$ref);
+  }
+
   const enumValues = parameter.schema?.enum ?? null;
+  const constValue = parameter.schema?.const ?? null;
   const defaultValues = parameter.schema?.default ?? null;
   const description = parameter.description ?? parameter.schema?.description ?? null;
   const examples = parameter.schema?.examples ?? null;
   const location = parameter.location ?? null;
+  
+  reportUnsupportedParameterValues(parameter.schema);
 
   //Make sure we keep parameter extensions
   const v2ParameterObjectProperties = ["location", "schema", "description"];
@@ -405,14 +414,32 @@ function convertParameter(parameter: any): any {
   });
 
   //Return the new v3 parameter object
-  return Object.assign({...v2ParameterObjectExtensions},
-    enumValues === null ? null : {enum: enumValues},
-    defaultValues === null ? null : {default: defaultValues},
-    description === null ? null : {description},
-    examples === null ? null : {examples},
-    location === null ? null : {location}
-  );
+  return {...v2ParameterObjectExtensions,
+    ...(enumValues === null ? null : {enum: enumValues}),
+    ...(constValue === null ? null : {enum: [constValue]}),
+    ...(defaultValues === null ? null : {default: defaultValues}),
+    ...(description === null ? null : {description}),
+    ...(examples === null ? null : {examples}),
+    ...(location === null ? null : {location})
+  };
 }
+
+/**
+ * This function makes sure we complain if a parameter schema uses now unsupported properties
+ */
+function reportUnsupportedParameterValues(schema: any) {
+  if(schema === undefined) return;
+  const excessProperties = Object.entries(schema).filter((([propertyName,]) => {
+    return !['$ref', 'enum', 'const', 'default', 'examples', 'description'].includes(propertyName);
+  }));
+  if(excessProperties.length > 0) {
+    const listOfProperties = excessProperties.map(([propertyName, property]) => {
+      return `- schema.${propertyName} with value: ${JSON.stringify(property)} are no longer supported`
+    })
+    console.warn(`Found properties in parameter schema that are no longer supported. Conversion completes with empty parameter object.\n${listOfProperties.join('\n')}`);
+  }
+}
+
 /**
  * Convert `channels`, `servers` and `securitySchemes` in components.
  */
