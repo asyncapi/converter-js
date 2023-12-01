@@ -70,6 +70,10 @@ export function isRefObject(value: unknown): boolean {
   return Boolean(value && '$ref' in (value as { $ref: any }));
 }
 
+export function isRemoteRef(value: any): boolean {
+  return isRefObject(value) && !value.$ref.startsWith('#')
+}
+
 export function getValueByRef(root: any, ref: string) {
   if (!ref.startsWith('#')) {
     return;

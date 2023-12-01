@@ -157,13 +157,13 @@ components:
       channel:
         $ref: '#/components/channels/usedChannel'
       messages:
-        - $ref: '#/components/messages/lightMeasured'
+        - $ref: '#/components/channels/usedChannel/messages/publish.message'
     usedChannel.subscribe:
       action: send
       channel:
         $ref: '#/components/channels/usedChannel'
       messages:
-        - $ref: '#/components/messages/turnOnOff'
+        - $ref: '#/components/channels/usedChannel/messages/subscribe.message.0'
         - $ref: '#/components/channels/usedChannel/messages/customMessageId'
         - $ref: '#/components/channels/usedChannel/messages/subscribe.message.2'
         - $ref: 'https://example.com/message'
@@ -182,4 +182,4 @@ components:
           scopes:
             - 'write:pets'
       messages:
-        - $ref: '#/components/messages/dimLight'
+        - $ref: '#/components/channels/unusedChannel/messages/dimLight.message'
