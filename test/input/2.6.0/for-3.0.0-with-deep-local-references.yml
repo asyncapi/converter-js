@@ -19,7 +19,7 @@ channels:
   'turnOn':
     publish:
       message:
-        $ref: '#/components/messages/lightMeasured'
+        $ref: '#/components/messages/turnOnOff'
     subscribe:
       message:
         oneOf:
@@ -38,7 +38,7 @@ components:
     'someChannel':
       publish:
         message:
-          $ref: '#/components/messages/lightMeasured'
+          $ref: '#/components/messages/turnOnOff'
       subscribe:
         message:
           oneOf:

@@ -19,7 +19,7 @@ channels:
     address: turnOn
     messages:
       publish.message:
-        $ref: '#/components/messages/lightMeasured'
+        $ref: '#/components/messages/turnOnOff'
       subscribe.message.0:
         $ref: '#/components/messages/turnOnOff'
       customMessageId:
@@ -42,13 +42,13 @@ operations:
     channel:
       $ref: '#/channels/turnOn'
     messages:
-      - $ref: '#/components/messages/lightMeasured'
+      - $ref: '#/channels/turnOn/messages/publish.message'
   turnOn.subscribe:
     action: send
     channel:
       $ref: '#/channels/turnOn'
     messages:
-      - $ref: '#/components/messages/turnOnOff'
+      - $ref: '#/channels/turnOn/messages/subscribe.message.0'
       - $ref: '#/channels/turnOn/messages/customMessageId'
 components:
   channels:
@@ -56,7 +56,7 @@ components:
       address: someChannel
       messages:
         publish.message:
-          $ref: '#/components/messages/lightMeasured'
+          $ref: '#/components/messages/turnOnOff'
         subscribe.message.0:
           $ref: '#/components/messages/turnOnOff'
         customMessageId:
@@ -98,11 +98,11 @@ components:
       channel:
         $ref: '#/components/channels/someChannel'
       messages:
-        - $ref: '#/components/messages/lightMeasured'
+        - $ref: '#/components/channels/someChannel/messages/publish.message'
     someChannel.subscribe:
       action: send
       channel:
         $ref: '#/components/channels/someChannel'
       messages:
-        - $ref: '#/components/messages/turnOnOff'
+        - $ref: '#/components/channels/someChannel/messages/subscribe.message.0'
         - $ref: '#/components/channels/someChannel/messages/customMessageId'

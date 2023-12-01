@@ -141,14 +141,16 @@ operations:
       $ref: >-
         #/channels/smartylighting~1streetlights~11~10~1action~1{streetlightId}~1turn~1on
     messages:
-      - $ref: '#/components/messages/lightMeasured'
+      - $ref: >-
+          #/channels/smartylighting~1streetlights~11~10~1action~1{streetlightId}~1turn~1on/messages/publish.message
   'smartylighting/streetlights/1/0/action/{streetlightId}/turn/on.subscribe':
     action: send
     channel:
       $ref: >-
         #/channels/smartylighting~1streetlights~11~10~1action~1{streetlightId}~1turn~1on
     messages:
-      - $ref: '#/components/messages/turnOnOff'
+      - $ref: >-
+          #/channels/smartylighting~1streetlights~11~10~1action~1{streetlightId}~1turn~1on/messages/subscribe.message.0
       - $ref: >-
           #/channels/smartylighting~1streetlights~11~10~1action~1{streetlightId}~1turn~1on/messages/customMessageId
       - $ref: >-
@@ -159,7 +161,7 @@ operations:
     channel:
       $ref: '#/channels/customChannelId'
     messages:
-      - $ref: '#/components/messages/turnOnOff'
+      - $ref: '#/channels/customChannelId/messages/turnOnOff.message'
   dimLight:
     action: send
     channel:
@@ -176,7 +178,8 @@ operations:
         scopes:
           - 'write:pets'
     messages:
-      - $ref: '#/components/messages/dimLight'
+      - $ref: >-
+          #/channels/smartylighting~1streetlights~11~10~1action~1{streetlightId}~1dim/messages/dimLight.message
 components:
   messages:
     lightMeasured:

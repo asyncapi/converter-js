@@ -1,4 +1,4 @@
-import { isPlainObject, createRefObject, isRefObject, sortObjectKeys, getValueByRef, getValueByPath, createRefPath } from './utils';
+import { isPlainObject, createRefObject, isRefObject, sortObjectKeys, getValueByRef, getValueByPath, createRefPath, isRemoteRef } from './utils';
 import type { AsyncAPIDocument, ConvertOptions, ConvertV2ToV3Options, ConvertFunction } from './interfaces';
 
 export const converters: Record<string, ConvertFunction> = {
@@ -111,6 +111,7 @@ type ToStandaloneOperationData = {
   options: any, 
   oldPath: string[]
 }
+
 /**
  * Convert operation part of channels into standalone operations
  */
@@ -304,7 +305,7 @@ function applyMessageRefsToOperation(serializedMessages: Record<string, any>, ne
   if (Object.keys(serializedMessages ?? {}).length > 0 ) {
     const newOperationMessages: Array<any> = [];
     Object.entries(serializedMessages).forEach(([messageId, messageValue]) => {
-      if (isRefObject(messageValue)) {
+      if (isRemoteRef(messageValue)) {
         // shallow copy of JS reference
         newOperationMessages.push({ ...messageValue });
       } else {
