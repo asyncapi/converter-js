@@ -271,7 +271,6 @@ function convertOperationObject(data: ConvertOperationObjectData, options: Requi
     applyMessageRefsToOperation(serializedMessages, newMessagePath, operation);
   }
 
-
   const sortedOperation = sortObjectKeys(
     operation, 
     ['action', 'channel', 'title', 'summary', 'description', 'security', 'tags', 'externalDocs', 'bindings', 'traits'],
