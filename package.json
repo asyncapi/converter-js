@@ -38,7 +38,7 @@
 	"author": "Fran Mendez <fmvilas@gmail.com> (fmvilas.com)",
 	"license": "Apache-2.0",
 	"dependencies": {
-		"@asyncapi/parser": "^3.0.8",
+		"@asyncapi/parser": "^3.0.9",
 		"js-yaml": "^3.14.1"
 	},
 	"devDependencies": {
