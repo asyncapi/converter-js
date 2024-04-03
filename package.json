@@ -1,6 +1,6 @@
 {
 	"name": "@asyncapi/converter",
-	"version": "1.4.16",
+	"version": "1.4.17",
 	"description": "Convert AsyncAPI documents from older to newer versions.",
 	"main": "lib/index.js",
 	"types": "lib/index.d.ts",
