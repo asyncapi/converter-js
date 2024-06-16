@@ -18,7 +18,7 @@ const converters: Record<string, ConvertFunction | ConvertOpenAPIFunction> = {
   ...thirdConverters,
   ...openapiConverters,
 };
-console.log(converters)
+
 const conversionVersions = Object.keys(converters);
 
 function convertOpenAPIToAsyncAPI(openapiDocument: OpenAPIDocument | AsyncAPIDocument, options: ConvertOptions): AsyncAPIDocument {
@@ -30,8 +30,8 @@ function convertOpenAPIToAsyncAPI(openapiDocument: OpenAPIDocument | AsyncAPIDoc
   }
 }
 
-// export function convert(asyncapi: string, version?: ConvertVersion, options?: ConvertOptions): string;
-// export function convert(asyncapi: AsyncAPIDocument, version?: ConvertVersion, options?: ConvertOptions): AsyncAPIDocument;
+// export function convert(input: string, version?: ConvertVersion, options?: ConvertOptions): string;
+// export function convert(input: AsyncAPIDocument, version?: ConvertVersion, options?: ConvertOptions): AsyncAPIDocument;
 export function convert(input: string | AsyncAPIDocument | OpenAPIDocument, version: ConvertVersion , options: ConvertOptions= {}): string | AsyncAPIDocument | OpenAPIDocument {
   const { format, document } = serializeInput(input);
 

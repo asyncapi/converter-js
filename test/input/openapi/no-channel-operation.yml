@@ -1,0 +1,42 @@
+openapi: '3.0.0'
+info: 
+  title: Sample Pet Store App
+  description: This is a sample server for a pet store.
+  termsOfService: http://example.com/terms/
+  contact:
+    name: API Support
+    url: http://www.example.com/support
+    email: support@example.com
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+  version: 1.0.1
+
+servers:
+- url: https://{username}.gigantic-server.com:{port}/{basePath}
+  description: The production API server
+  variables:
+    username:
+      default: demo
+      description: this value is assigned by the service provider, in this example `gigantic-server.com`
+    port:
+      enum:
+        - '8443'
+        - '443'
+      default: '8443'
+    basePath:
+      default: v2
+
+security:
+  - {}
+  - petstore_auth:
+    - write:pets
+    - read:pets
+
+tags:
+  name: pet
+  description: Pets operations
+
+externalDocs:
+  description: Find more info here
+  url: https://example.com
