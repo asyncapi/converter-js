@@ -3,25 +3,42 @@ import { dump } from 'js-yaml';
 import { converters as firstConverters } from "./first-version";
 import { converters as secondConverters } from "./second-version";
 import { converters as thirdConverters } from "./third-version";
+import { converters as openapiConverters } from "./openapi";
 
 import { serializeInput } from "./utils";
 
-import type { AsyncAPIDocument, ConvertVersion, ConvertOptions, ConvertFunction } from './interfaces';
+import type { AsyncAPIDocument, ConvertVersion, ConvertOptions, ConvertFunction, ConvertOpenAPIFunction, OpenAPIDocument } from './interfaces';
 
 /**
  * Value for key (version) represents the function which converts specification from previous version to the given as key.
  */
-const converters: Record<string, ConvertFunction> = {
+const converters: Record<string, ConvertFunction | ConvertOpenAPIFunction> = {
   ...firstConverters,
   ...secondConverters,
   ...thirdConverters,
+  ...openapiConverters,
 };
+console.log(converters)
 const conversionVersions = Object.keys(converters);
 
-export function convert(asyncapi: string, version?: ConvertVersion, options?: ConvertOptions): string;
-export function convert(asyncapi: AsyncAPIDocument, version?: ConvertVersion, options?: ConvertOptions): AsyncAPIDocument;
-export function convert(asyncapi: string | AsyncAPIDocument, version: ConvertVersion = '2.6.0', options: ConvertOptions = {}): string | AsyncAPIDocument {
-  const { format, document } = serializeInput(asyncapi);
+function convertOpenAPIToAsyncAPI(openapiDocument: OpenAPIDocument | AsyncAPIDocument, options: ConvertOptions): AsyncAPIDocument {
+  const openapiToAsyncapiConverter = converters['openapi'];
+  if (openapiToAsyncapiConverter) {
+    return openapiToAsyncapiConverter(openapiDocument as any, options) as AsyncAPIDocument;
+  } else {
+    throw new Error(`Unsupported OpenAPI version. This converter only supports OpenAPI 3.0.`);
+  }
+}
+
+// export function convert(asyncapi: string, version?: ConvertVersion, options?: ConvertOptions): string;
+// export function convert(asyncapi: AsyncAPIDocument, version?: ConvertVersion, options?: ConvertOptions): AsyncAPIDocument;
+export function convert(input: string | AsyncAPIDocument | OpenAPIDocument, version: ConvertVersion , options: ConvertOptions= {}): string | AsyncAPIDocument | OpenAPIDocument {
+  const { format, document } = serializeInput(input);
+
+  if ('openapi' in document) {
+    let convertedAsyncAPI = convertOpenAPIToAsyncAPI(document, options);
+    return format === 'yaml' ? dump(convertedAsyncAPI, { skipInvalid: true }) : convertedAsyncAPI;
+  }
 
   const asyncapiVersion = document.asyncapi;
   let fromVersion = conversionVersions.indexOf(asyncapiVersion);
@@ -42,7 +59,10 @@ export function convert(asyncapi: string | AsyncAPIDocument, version: ConvertVer
   let converted = document;
   for (let i = fromVersion; i <= toVersion; i++) {
     const v = conversionVersions[i] as ConvertVersion;
-    converted = converters[v](converted, options);
+    const convertFunction = converters[v];
+    converted = ('asyncapi' in converted)
+    ? (convertFunction as ConvertFunction)(converted as AsyncAPIDocument, options)
+    : (convertFunction as ConvertOpenAPIFunction)(converted as OpenAPIDocument, options);
   }
 
   if (format === 'yaml') {
