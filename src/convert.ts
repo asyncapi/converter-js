@@ -12,32 +12,21 @@ import type { AsyncAPIDocument, ConvertVersion, ConvertOptions, ConvertFunction,
 /**
  * Value for key (version) represents the function which converts specification from previous version to the given as key.
  */
-const converters: Record<string, ConvertFunction | ConvertOpenAPIFunction> = {
+const asyncAPIconverters: Record<string, ConvertFunction> = {
   ...firstConverters,
   ...secondConverters,
   ...thirdConverters,
-  ...openapiConverters,
 };
 
-const conversionVersions = Object.keys(converters);
+const conversionVersions = Object.keys(asyncAPIconverters);
 
-function convertOpenAPIToAsyncAPI(openapiDocument: OpenAPIDocument | AsyncAPIDocument, options: ConvertOptions): AsyncAPIDocument {
-  const openapiToAsyncapiConverter = converters['openapi'];
-  if (openapiToAsyncapiConverter) {
-    return openapiToAsyncapiConverter(openapiDocument as any, options) as AsyncAPIDocument;
-  } else {
-    throw new Error(`Unsupported OpenAPI version. This converter only supports OpenAPI 3.0.`);
-  }
-}
-
-// export function convert(input: string, version?: ConvertVersion, options?: ConvertOptions): string;
-// export function convert(input: AsyncAPIDocument, version?: ConvertVersion, options?: ConvertOptions): AsyncAPIDocument;
-export function convert(input: string | AsyncAPIDocument | OpenAPIDocument, version: ConvertVersion , options: ConvertOptions= {}): string | AsyncAPIDocument | OpenAPIDocument {
+export function convert(input: string, version: ConvertVersion, options?: ConvertOptions): string;
+export function convert(input: AsyncAPIDocument, version: ConvertVersion, options?: ConvertOptions): AsyncAPIDocument;
+export function convert(input: string | AsyncAPIDocument, version: ConvertVersion , options: ConvertOptions= {}): string | AsyncAPIDocument {
   const { format, document } = serializeInput(input);
 
   if ('openapi' in document) {
-    let convertedAsyncAPI = convertOpenAPIToAsyncAPI(document, options);
-    return format === 'yaml' ? dump(convertedAsyncAPI, { skipInvalid: true }) : convertedAsyncAPI;
+    throw new Error('Cannot convert OpenAPI document. Use convertOpenAPI function instead.');
   }
 
   const asyncapiVersion = document.asyncapi;
@@ -59,14 +48,31 @@ export function convert(input: string | AsyncAPIDocument | OpenAPIDocument, vers
   let converted = document;
   for (let i = fromVersion; i <= toVersion; i++) {
     const v = conversionVersions[i] as ConvertVersion;
-    const convertFunction = converters[v];
-    converted = ('asyncapi' in converted)
-    ? (convertFunction as ConvertFunction)(converted as AsyncAPIDocument, options)
-    : (convertFunction as ConvertOpenAPIFunction)(converted as OpenAPIDocument, options);
+    converted = asyncAPIconverters[v](converted, options);
   }
 
   if (format === 'yaml') {
     return dump(converted, { skipInvalid: true });
   }
   return converted;
+}
+
+export function convertOpenAPI(input: string ,options?: ConvertOptions): string;
+export function convertOpenAPI(input: OpenAPIDocument ,options?: ConvertOptions): AsyncAPIDocument;
+export function convertOpenAPI(input: string | OpenAPIDocument,options: ConvertOptions = {}): string | AsyncAPIDocument {
+
+  const { format, document } = serializeInput(input);
+
+  const openapiToAsyncapiConverter = openapiConverters["openapi"] as ConvertOpenAPIFunction;
+
+  if (!openapiToAsyncapiConverter) {
+    throw new Error("OpenAPI to AsyncAPI converter is not available.");
+  }
+
+  const convertedAsyncAPI = openapiToAsyncapiConverter(document as OpenAPIDocument, options);
+
+  if (format === "yaml") {
+    return dump(convertedAsyncAPI, { skipInvalid: true });
+  }
+  return convertedAsyncAPI;
 }

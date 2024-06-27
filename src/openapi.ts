@@ -54,7 +54,6 @@ function convertInfoObject(openapi: OpenAPIDocument) {
   }
 
 function convertServerObjects(servers: Record<string, any>, openapi: OpenAPIDocument) {
-  console.log("security",openapi.security)
   const newServers: Record<string, any> = {};
   const security: Record<string, any> = openapi.security;
   Object.entries(servers).forEach(([serverName, server]: [string, any]) => {
