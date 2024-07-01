@@ -1,8 +1,8 @@
 import { load } from 'js-yaml';
 
-import type { AsyncAPIDocument } from "./interfaces";
+import type { AsyncAPIDocument, OpenAPIDocument } from "./interfaces";
 
-export function serializeInput(document: string | AsyncAPIDocument): { format: 'json' | 'yaml', document: AsyncAPIDocument } | never {
+export function serializeInput(document: string | AsyncAPIDocument | OpenAPIDocument): { format: 'json' | 'yaml', document: AsyncAPIDocument | OpenAPIDocument } | never {
   let triedConvertToYaml = false;
   try {
     if (typeof document === 'object') {
@@ -14,10 +14,17 @@ export function serializeInput(document: string | AsyncAPIDocument): { format: '
 
     const maybeJSON = JSON.parse(document);
     if (typeof maybeJSON === 'object') {
-      return {
-        format: 'json',
-        document: maybeJSON,
-      };
+      if ('openapi' in maybeJSON) {
+        return {
+          format: 'json',
+          document: maybeJSON,
+        };
+      } else {
+        return {
+          format: 'json',
+          document: maybeJSON,
+        };
+      }
     }
 
     triedConvertToYaml = true; // NOSONAR
@@ -25,7 +32,7 @@ export function serializeInput(document: string | AsyncAPIDocument): { format: '
     // but if it's `string` then we have option that it can be YAML but it doesn't have to be
     return {
       format: 'yaml',
-      document: load(document) as AsyncAPIDocument,
+      document: load(document) as AsyncAPIDocument | OpenAPIDocument,
     };
   } catch (e) {
     try {
@@ -36,7 +43,7 @@ export function serializeInput(document: string | AsyncAPIDocument): { format: '
       // try to parse (again) YAML, because the text itself may not have a JSON representation and cannot be represented as a JSON object/string
       return {
         format: 'yaml',
-        document: load(document as string) as AsyncAPIDocument,
+        document: load(document as string) as AsyncAPIDocument | OpenAPIDocument,
       };
     } catch (err) {
       throw new Error('AsyncAPI document must be a valid JSON or YAML document.');
