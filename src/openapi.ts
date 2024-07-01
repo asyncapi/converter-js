@@ -5,43 +5,25 @@ export const converters: Record<string, ConvertOpenAPIFunction > = {
   'openapi': from_openapi_to_asyncapi,
 }
 
-function from_openapi_to_asyncapi(openapi: OpenAPIDocument, options: ConvertOptions): AsyncAPIDocument{
-    convertName(openapi)
+function from_openapi_to_asyncapi(openapi: OpenAPIDocument, options?: ConvertOptions): AsyncAPIDocument {
+  const asyncapi: Partial<AsyncAPIDocument> = {
+      asyncapi: openapi.openapi,
+      info: convertInfoObject(openapi.info, openapi),
+      servers: isPlainObject(openapi.servers[0]) ? convertServerObjects(openapi.servers, openapi) : undefined,
+  };
 
-    convertInfoObject(openapi);
-    if (isPlainObject(openapi.servers)) {
-      openapi.servers = convertServerObjects(openapi.servers, openapi);
-    }
-
-    return sortObjectKeys(
-        openapi,
-        ['asyncapi', 'info', 'defaultContentType', 'servers', 'channels', 'operations', 'components']
-    )
+  return sortObjectKeys(
+      asyncapi as AsyncAPIDocument,
+      ['asyncapi', 'info', 'defaultContentType', 'servers', 'channels', 'operations', 'components']
+  );
 }
 
-function convertName(openapi: OpenAPIDocument): AsyncAPIDocument {
-    let { openapi: version } = openapi;
-    openapi.asyncapi = version;
-    delete (openapi as any).openapi;;
-
-    return sortObjectKeys(
-        openapi,
-        ['asyncapi', 'info', 'defaultContentType', 'servers', 'channels', 'operations', 'components']
-    )
-}
-
-function convertInfoObject(openapi: OpenAPIDocument) {
-    if(openapi.tags) {
-      openapi.info.tags = openapi.tags;
-      delete openapi.tags;
-    }
-  
-    if(openapi.externalDocs) {
-      openapi.info.externalDocs = openapi.externalDocs;
-      delete openapi.externalDocs;
-    }
-  
-    return (openapi.info = sortObjectKeys(openapi.info, [
+function convertInfoObject(info: OpenAPIDocument['info'], openapi: OpenAPIDocument): AsyncAPIDocument['info'] {
+  return sortObjectKeys({
+      ...info,
+      tags: openapi.tags || undefined,
+      externalDocs: openapi.externalDocs || undefined,
+  }, [
       "title",
       "version",
       "description",
@@ -50,10 +32,10 @@ function convertInfoObject(openapi: OpenAPIDocument) {
       "license",
       "tags",
       "externalDocs",
-    ]));
-  }
+  ]);
+}
 
-function convertServerObjects(servers: Record<string, any>, openapi: OpenAPIDocument) {
+function convertServerObjects(servers: Record<string, any>, openapi: OpenAPIDocument): AsyncAPIDocument['servers'] {
   const newServers: Record<string, any> = {};
   const security: Record<string, any> = openapi.security;
   Object.entries(servers).forEach(([serverName, server]: [string, any]) => {
@@ -77,43 +59,59 @@ function convertServerObjects(servers: Record<string, any>, openapi: OpenAPIDocu
       server.security = security;
       delete openapi.security;
     }
-  
+
       newServers[serverName] = sortObjectKeys(
         server,
         ['host', 'pathname', 'protocol', 'protocolVersion', 'title', 'summary', 'description', 'variables', 'security', 'tags', 'externalDocs', 'bindings'],
       );
     });
-    
-    return newServers
+
+    return newServers;
 }
 
 function resolveServerUrl(url: string): {
   host: string;
-  pathname: string | undefined;
-  protocol: string | undefined;
+  pathname?: string;
+  protocol: string;
 } {
   let [maybeProtocol, maybeHost] = url.split("://");
-  console.log("maybeProtocol", maybeProtocol);
+  console.log("maybeProtocol", maybeProtocol, "maybeshost:", maybeHost)
   if (!maybeHost) {
-    maybeHost = maybeProtocol;
+      maybeHost = maybeProtocol;
   }
   const [host, ...pathnames] = maybeHost.split("/");
-  console.log("pathname1", pathnames);
+  console.log("host", host, "pathnames", pathnames)
+  console.log(`/${pathnames.join("/")}`)
   if (pathnames.length) {
-    return {
-      host,
-      pathname: `/${pathnames.join("/")}`,
-      protocol: maybeProtocol,
-    };
+      return {
+          host,
+          pathname: `/${pathnames.join("/")}`,
+          protocol: maybeProtocol,
+      };
   }
-  return { host, pathname: undefined, protocol: maybeProtocol };
+  return { host, pathname: undefined , protocol: maybeProtocol };
 }
 
-function convertSecurity(security: Record<string, any>) {
-    if(security.type === 'oauth2' && security.flows.authorizationCode.scopes) {
-      const availableScopes = security.flows.authorizationCode.scopes;
-      security.flows.authorizationCode.availableScopes = availableScopes;
-      delete security.flows.authorizationCode.scopes;
-    }
-    return security;
+function convertSecurity(security: Record<string, any>): Record<string, any> {
+  return security.map((securityRequirement: Record<string, any>) => {
+      const newSecurityRequirement: Record<string, any> = {};
+      Object.entries(securityRequirement).forEach(([key, value]) => {
+          if (value.type === 'oauth2' && value.flows.authorizationCode?.scopes) {
+              newSecurityRequirement[key] = {
+                  ...value,
+                  flows: {
+                      ...value.flows,
+                      authorizationCode: {
+                          ...value.flows.authorizationCode,
+                          availableScopes: value.flows.authorizationCode.scopes,
+                      },
+                  },
+              };
+              delete newSecurityRequirement[key].flows.authorizationCode.scopes;
+          } else {
+              newSecurityRequirement[key] = value;
+          }
+      });
+      return newSecurityRequirement;
+  });
 }

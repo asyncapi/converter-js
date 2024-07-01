@@ -7,7 +7,7 @@ import { converters as openapiConverters } from "./openapi";
 
 import { serializeInput } from "./utils";
 
-import type { AsyncAPIDocument, ConvertVersion, ConvertOptions, ConvertFunction, ConvertOpenAPIFunction, OpenAPIDocument } from './interfaces';
+import type { AsyncAPIDocument, AsyncAPIConvertVersion, OpenAPIConvertVersion, ConvertOptions, ConvertFunction, ConvertOpenAPIFunction, OpenAPIDocument } from './interfaces';
 
 /**
  * Value for key (version) represents the function which converts specification from previous version to the given as key.
@@ -20,9 +20,9 @@ const asyncAPIconverters: Record<string, ConvertFunction> = {
 
 const conversionVersions = Object.keys(asyncAPIconverters);
 
-export function convert(input: string, version: ConvertVersion, options?: ConvertOptions): string;
-export function convert(input: AsyncAPIDocument, version: ConvertVersion, options?: ConvertOptions): AsyncAPIDocument;
-export function convert(input: string | AsyncAPIDocument, version: ConvertVersion , options: ConvertOptions= {}): string | AsyncAPIDocument {
+export function convert(input: string, version: AsyncAPIConvertVersion, options?: ConvertOptions): string;
+export function convert(input: AsyncAPIDocument, version: AsyncAPIConvertVersion, options?: ConvertOptions): AsyncAPIDocument;
+export function convert(input: string | AsyncAPIDocument, version: AsyncAPIConvertVersion , options: ConvertOptions= {}): string | AsyncAPIDocument {
   const { format, document } = serializeInput(input);
 
   if ('openapi' in document) {
@@ -47,7 +47,7 @@ export function convert(input: string | AsyncAPIDocument, version: ConvertVersio
   fromVersion++;
   let converted = document;
   for (let i = fromVersion; i <= toVersion; i++) {
-    const v = conversionVersions[i] as ConvertVersion;
+    const v = conversionVersions[i] as AsyncAPIConvertVersion;
     converted = asyncAPIconverters[v](converted, options);
   }
 
@@ -63,7 +63,7 @@ export function convertOpenAPI(input: string | OpenAPIDocument,options: ConvertO
 
   const { format, document } = serializeInput(input);
 
-  const openapiToAsyncapiConverter = openapiConverters["openapi"] as ConvertOpenAPIFunction;
+  const openapiToAsyncapiConverter = openapiConverters["openapi" as OpenAPIConvertVersion] as ConvertOpenAPIFunction;
 
   if (!openapiToAsyncapiConverter) {
     throw new Error("OpenAPI to AsyncAPI converter is not available.");
