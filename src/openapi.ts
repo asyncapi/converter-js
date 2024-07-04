@@ -9,7 +9,9 @@ function from_openapi_to_asyncapi(openapi: OpenAPIDocument, options?: ConvertOpt
   const asyncapi: Partial<AsyncAPIDocument> = {
       asyncapi: openapi.openapi,
       info: convertInfoObject(openapi.info, openapi),
-      servers: isPlainObject(openapi.servers[0]) ? convertServerObjects(openapi.servers, openapi) : undefined,
+      servers: isPlainObject(openapi.servers) ? convertServerObjects(openapi.servers, openapi) : undefined,
+      channels: convertPathsToChannels(openapi.paths),
+      operations: convertPathsToOperations(openapi.paths, 'server'),
   };
 
   return sortObjectKeys(
@@ -56,7 +58,7 @@ function convertServerObjects(servers: Record<string, any>, openapi: OpenAPIDocu
     delete server.url;
 
     if (security) {
-      server.security = security;
+      server.security = convertSecurity(security);
       delete openapi.security;
     }
 
@@ -114,4 +116,148 @@ function convertSecurity(security: Record<string, any>): Record<string, any> {
       });
       return newSecurityRequirement;
   });
+}
+
+function convertPathsToChannels(paths: OpenAPIDocument['paths']): AsyncAPIDocument['channels'] {
+  const channels: AsyncAPIDocument['channels'] = {};
+
+  Object.entries(paths).forEach(([path, pathItem]:[any,any]) => {
+    const channelName = path.replace(/^\//, '').replace(/\//g, '_');
+    channels[channelName] = {
+      address: path,
+      messages: {},
+      parameters: {}
+    };
+
+    Object.entries(pathItem).forEach(([method, operation]:[any,any]) => {
+      if (['get', 'post', 'put', 'delete', 'patch'].includes(method)) {
+        const parameters = convertParameters(pathItem[method].parameters)
+        channels[channelName].parameters = { ...channels[channelName].parameters, ...parameters };
+
+        if (operation.responses) {
+          Object.entries(operation.responses).forEach(([statusCode, response]:[any,any]) => {
+            const messageName = `${operation.operationId || method}Response${statusCode}`;
+            channels[channelName].messages[messageName] = {
+              name: messageName,
+              payload: response.content?.['application/json']?.schema || {},
+              bindings: getMessageBindings(statusCode, parameters.headers)
+            };
+          }
+        );
+        }
+      }
+    });
+  });
+
+  return channels;
+}
+function convertPathsToOperations(paths: OpenAPIDocument['paths'], pointOfView: 'server' | 'client'): AsyncAPIDocument['operations'] {
+  const operations: AsyncAPIDocument['operations'] = {};
+
+  Object.entries(paths).forEach(([path, pathItem]:[any,any]) => {
+    const channelName = path.replace(/^\//, '').replace(/\//g, '_');
+
+    Object.entries(pathItem).forEach(([method, operation]:[any,any]) => {
+      if (['get', 'post', 'put', 'delete', 'patch'].includes(method)) {
+        const operationId = operation.operationId || `${method}${channelName}`;
+        const parameters = convertParameters(pathItem[method].parameters);
+        operations[operationId] = {
+          action: pointOfView === 'server' ? 'receive' : 'send',
+          channel: {
+            $ref: `#/channels/${channelName}`
+          },
+          summary: operation.summary,
+          description: operation.description,
+          tags: operation.tags,
+          bindings: getOperationBindings(method, parameters?.query)
+        };
+      }
+    });
+  });
+
+  return operations;
+}
+
+function getOperationBindings(method: string, queryParameters?: Record<string, any>): Record<string, any> {
+  const bindings: Record<string, any> = {
+    http: {
+      bindingVersion: "0.3.0",
+    },
+  };
+
+  if (method) {
+    bindings.http.method = method.toUpperCase();
+  }
+
+  if (queryParameters && Object.keys(queryParameters).length > 0) {
+    bindings.http.query = {...queryParameters};
+  }
+
+  return bindings;
+}
+
+function getMessageBindings(statusCode?: string, headers?: Record<string, any>): Record<string, any> {
+  const bindings: Record<string, any> = {
+    http: {
+      bindingVersion: "0.3.0",
+    },
+  };
+
+  if (statusCode) {
+    bindings.http.statusCode = parseInt(statusCode);
+  }
+
+  if (headers && Object.keys(headers).length > 0) {
+    bindings.http.headers = {...headers};
+  }
+
+  return bindings;
+}
+
+function getChannelBindings(method: string, header?: Record<string, any>, query?: Record<string,any>): Record<string, any> {
+  const bindings: Record<string, any> = {
+    ws: {
+      bindingVersion: "0.1.0",
+    },
+  };
+
+  if (method) {
+    bindings.http.method = method.toUpperCase();
+  }
+
+  if (query && Object.keys(query).length > 0) {
+    bindings.ws.query = {...query};
+  }
+
+  if (header && Object.keys(header).length > 0) {
+    bindings.ws.header = {...header};
+  }
+
+  return bindings;
+}
+
+function convertParameters(parameters: any[]): Record<string, any> {
+  const convertedParams: Record<string, any> = {};
+  
+  if (Array.isArray(parameters)) {
+    parameters.forEach((param) => {
+      const paramObj: Record<string, any> = {
+        ...(param.description !== undefined && { description: param.description }),
+      };
+      
+      switch (param.in) {
+        case 'query':
+          paramObj.query = param.schema;
+          break;
+        case 'header':
+          paramObj.headers = param.schema;
+          break;
+        case 'cookie':
+          throw new Error('Cookie parameters are not supported in asyncapi');
+      }
+
+      Object.assign(convertedParams, paramObj);
+    });
+  }
+  return convertedParams;
 }
