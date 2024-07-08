@@ -12,6 +12,7 @@ function from_openapi_to_asyncapi(openapi: OpenAPIDocument, options?: ConvertOpt
       servers: isPlainObject(openapi.servers) ? convertServerObjects(openapi.servers, openapi) : undefined,
       channels: convertPathsToChannels(openapi.paths),
       operations: convertPathsToOperations(openapi.paths, 'server'),
+      components: convertComponents(openapi.components),
   };
 
   return sortObjectKeys(
@@ -125,32 +126,71 @@ function convertPathsToChannels(paths: OpenAPIDocument['paths']): AsyncAPIDocume
     const channelName = path.replace(/^\//, '').replace(/\//g, '_');
     channels[channelName] = {
       address: path,
-      messages: {},
-      parameters: {}
+      messages: {}
     };
 
     Object.entries(pathItem).forEach(([method, operation]:[any,any]) => {
       if (['get', 'post', 'put', 'delete', 'patch'].includes(method)) {
-        const parameters = convertParameters(pathItem[method].parameters)
-        channels[channelName].parameters = { ...channels[channelName].parameters, ...parameters };
+        const parameters = convertParameters(pathItem[method].parameters);
+        if(channels[channelName].parameters) {
+          channels[channelName].parameters = parameters;
+        }
 
-        if (operation.responses) {
-          Object.entries(operation.responses).forEach(([statusCode, response]:[any,any]) => {
-            const messageName = `${operation.operationId || method}Response${statusCode}`;
+        if(isPlainObject(operation.requestBody)) {
+          const contentTypes = Object.keys(operation.requestBody.content || {});
+          contentTypes.forEach((contentType) => {
+            const messageName = `${operation.operationId || method}Request_${contentType.replace('/', '_')}`;
             channels[channelName].messages[messageName] = {
               name: messageName,
-              payload: response.content?.['application/json']?.schema || {},
-              bindings: getMessageBindings(statusCode, parameters.headers)
+              summary: operation.summary,
+              description: operation.description,
+              tags: operation.tags,
+              externalDocs: operation.externalDocs,
+              payload: operation.requestBody.content[contentType]?.schema || {},
+              bindings: getMessageBindings(undefined, parameters.headers),
+              contentType: contentType,
             };
+          })
+        }
+
+        if (isPlainObject(operation.responses)) {
+          Object.entries(operation.responses).forEach(([statusCode, response]:[string,any]) => {
+            const contentTypes = Object.keys(response.content || {});
+            if (contentTypes.length === 0) {
+              const messageName = `${operation.operationId || method}Response${statusCode}`;
+              channels[channelName].messages[messageName] = {
+                name: messageName,
+                description: response.description,
+                bindings: getMessageBindings(statusCode, parameters?.headers)
+              };
+            } else {
+              contentTypes.forEach((contentType) => {
+                const messageName = `${operation.operationId || method}Response${statusCode}_${contentType.replace('/', '_')}`;
+                channels[channelName].messages[messageName] = {
+                  name: messageName,
+                  summary: operation.summary,
+                  description: response.description,
+                  tags: operation.tags,
+                  externalDocs: operation.externalDocs,
+                  payload: response.content[contentType]?.schema || {},
+                  bindings: getMessageBindings(statusCode, parameters.headers),
+                  contentType: contentType,
+                };
+              });
+            }
           }
         );
+
         }
+        delete channels[channelName].parameters?.headers;
+        delete channels[channelName].parameters?.query;
       }
     });
   });
 
   return channels;
 }
+
 function convertPathsToOperations(paths: OpenAPIDocument['paths'], pointOfView: 'server' | 'client'): AsyncAPIDocument['operations'] {
   const operations: AsyncAPIDocument['operations'] = {};
 
@@ -171,12 +211,13 @@ function convertPathsToOperations(paths: OpenAPIDocument['paths'], pointOfView: 
           tags: operation.tags,
           bindings: getOperationBindings(method, parameters?.query)
         };
+
       }
     });
   });
 
   return operations;
-}
+};
 
 function getOperationBindings(method: string, queryParameters?: Record<string, any>): Record<string, any> {
   const bindings: Record<string, any> = {
@@ -237,27 +278,49 @@ function getChannelBindings(method: string, header?: Record<string, any>, query?
 }
 
 function convertParameters(parameters: any[]): Record<string, any> {
-  const convertedParams: Record<string, any> = {};
+  const convertedParams: Record<string, any> = {
+    query: {},
+    headers: {},
+  };
   
   if (Array.isArray(parameters)) {
     parameters.forEach((param) => {
-      const paramObj: Record<string, any> = {
-        ...(param.description !== undefined && { description: param.description }),
-      };
+
+      convertedParams[param.name] = {}
+      convertedParams[param.name].description = param.description;
       
       switch (param.in) {
         case 'query':
-          paramObj.query = param.schema;
+          convertedParams.query[param.name] = param.schema;
           break;
         case 'header':
-          paramObj.headers = param.schema;
+          convertedParams.headers[param.name] = param.schema;
           break;
         case 'cookie':
           throw new Error('Cookie parameters are not supported in asyncapi');
       }
 
-      Object.assign(convertedParams, paramObj);
     });
   }
   return convertedParams;
+}
+
+function convertComponents(components: OpenAPIDocument['components']): AsyncAPIDocument['components'] {
+  if (!isPlainObject(components)) {
+    return;
+  }
+
+  const asyncComponents: AsyncAPIDocument['components'] = {};
+
+  if (isPlainObject(components.schemas)) {
+    asyncComponents.schemas = components.schemas;
+  }
+  if (isPlainObject(components.securitySchemes)) {
+    asyncComponents.securitySchemes = components.securitySchemes;
+  }
+  if (isPlainObject(components.parameters)) {
+    asyncComponents.parameters = components.parameters;
+  }
+  
+  return asyncComponents;
 }
