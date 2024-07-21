@@ -1,4 +1,4 @@
-import { sortObjectKeys, isRefObject, isPlainObject } from "./utils";
+import { sortObjectKeys, isRefObject, isPlainObject, removeEmptyObjects } from "./utils";
 import { AsyncAPIDocument, ConvertOpenAPIFunction, ConvertOptions, OpenAPIDocument } from "./interfaces";
 
 export const converters: Record<string, ConvertOpenAPIFunction > = {
@@ -7,13 +7,15 @@ export const converters: Record<string, ConvertOpenAPIFunction > = {
 
 function from_openapi_to_asyncapi(openapi: OpenAPIDocument, options?: ConvertOptions): AsyncAPIDocument {
   const asyncapi: Partial<AsyncAPIDocument> = {
-      asyncapi: openapi.openapi,
+      asyncapi: '3.0.0',
       info: convertInfoObject(openapi.info, openapi),
-      servers: isPlainObject(openapi.servers) ? convertServerObjects(openapi.servers, openapi) : undefined,
-      channels: convertPathsToChannels(openapi.paths),
-      operations: convertPathsToOperations(openapi.paths, 'server'),
-      components: convertComponents(openapi.components),
+      servers: convertServerObjects(openapi.servers, openapi),
+      channels: isPlainObject(openapi.paths) ? convertPathsToChannels(openapi.paths) : undefined,
+      operations: isPlainObject(openapi.paths) ? convertPathsToOperations(openapi.paths, 'server') : undefined,
+      components: isPlainObject(openapi.components) ? convertComponents(openapi.components): undefined,
   };
+
+  removeEmptyObjects(asyncapi);
 
   return sortObjectKeys(
       asyncapi as AsyncAPIDocument,
@@ -24,8 +26,8 @@ function from_openapi_to_asyncapi(openapi: OpenAPIDocument, options?: ConvertOpt
 function convertInfoObject(info: OpenAPIDocument['info'], openapi: OpenAPIDocument): AsyncAPIDocument['info'] {
   return sortObjectKeys({
       ...info,
-      tags: openapi.tags || undefined,
-      externalDocs: openapi.externalDocs || undefined,
+      tags: [openapi.tags],
+      externalDocs: openapi.externalDocs,
   }, [
       "title",
       "version",
@@ -41,7 +43,9 @@ function convertInfoObject(info: OpenAPIDocument['info'], openapi: OpenAPIDocume
 function convertServerObjects(servers: Record<string, any>, openapi: OpenAPIDocument): AsyncAPIDocument['servers'] {
   const newServers: Record<string, any> = {};
   const security: Record<string, any> = openapi.security;
-  Object.entries(servers).forEach(([serverName, server]: [string, any]) => {
+  Object.entries(servers).forEach(([index, server]: [string, any]) => {
+    
+    const serverName = generateServerName(server.url);
     if (isRefObject(server)) {
       newServers[serverName] = server;
       return;
@@ -72,19 +76,24 @@ function convertServerObjects(servers: Record<string, any>, openapi: OpenAPIDocu
     return newServers;
 }
 
+function generateServerName(url: string): string {
+  const { host, pathname } = resolveServerUrl(url);
+  const baseName = host.split('.').slice(-2).join('.');
+  const pathSegment = pathname ? pathname.split('/')[1] : ''; 
+  return `${baseName}${pathSegment ? `_${pathSegment}` : ''}`.replace(/[^a-zA-Z0-9_]/g, '_'); 
+}
+
 function resolveServerUrl(url: string): {
   host: string;
   pathname?: string;
   protocol: string;
 } {
   let [maybeProtocol, maybeHost] = url.split("://");
-  console.log("maybeProtocol", maybeProtocol, "maybeshost:", maybeHost)
   if (!maybeHost) {
       maybeHost = maybeProtocol;
   }
   const [host, ...pathnames] = maybeHost.split("/");
-  console.log("host", host, "pathnames", pathnames)
-  console.log(`/${pathnames.join("/")}`)
+
   if (pathnames.length) {
       return {
           host,

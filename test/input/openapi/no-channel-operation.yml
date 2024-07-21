@@ -26,13 +26,6 @@ servers:
         default: '8443'
       basePath:
         default: v2
-  
-security:
-  - {}
-  - petstore_auth:
-    - write:pets
-    - read:pets
-
 tags:
   name: pet
   description: Pets operations
