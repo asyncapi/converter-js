@@ -1,19 +1,24 @@
-import { sortObjectKeys, isRefObject, isPlainObject, removeEmptyObjects } from "./utils";
+import { sortObjectKeys, isRefObject, isPlainObject, removeEmptyObjects, createRefObject } from "./utils";
 import { AsyncAPIDocument, ConvertOpenAPIFunction, ConvertOptions, OpenAPIDocument } from "./interfaces";
 
 export const converters: Record<string, ConvertOpenAPIFunction > = {
   'openapi': from_openapi_to_asyncapi,
 }
 
-function from_openapi_to_asyncapi(openapi: OpenAPIDocument, options?: ConvertOptions): AsyncAPIDocument {
+function from_openapi_to_asyncapi(openapi: OpenAPIDocument, options: ConvertOptions={}): AsyncAPIDocument {
+  const perspective = options.v2tov3?.pointOfView === 'client' ? 'client' : 'server';
   const asyncapi: Partial<AsyncAPIDocument> = {
       asyncapi: '3.0.0',
       info: convertInfoObject(openapi.info, openapi),
-      servers: convertServerObjects(openapi.servers, openapi),
-      channels: isPlainObject(openapi.paths) ? convertPathsToChannels(openapi.paths) : undefined,
-      operations: isPlainObject(openapi.paths) ? convertPathsToOperations(openapi.paths, 'server') : undefined,
-      components: isPlainObject(openapi.components) ? convertComponents(openapi.components): undefined,
+      servers: openapi.servers ? convertServerObjects(openapi.servers, openapi) : undefined,
+      channels: {},
+      operations: {},
+      components: convertComponents(openapi)
   };
+
+  const { channels, operations } = convertPaths(openapi.paths, perspective);
+  asyncapi.channels = channels;
+  asyncapi.operations = operations;
 
   removeEmptyObjects(asyncapi);
 
@@ -23,7 +28,27 @@ function from_openapi_to_asyncapi(openapi: OpenAPIDocument, options?: ConvertOpt
   );
 }
 
-function convertInfoObject(info: OpenAPIDocument['info'], openapi: OpenAPIDocument): AsyncAPIDocument['info'] {
+interface InfoObject {
+  title: string;
+  version: string;
+  description?: string;
+  termsOfService?: string;
+  contact?: ContactObject;
+  license?: LicenseObject;
+}
+
+interface ContactObject {
+  name?: string;
+  url?: string;
+  email?: string;
+}
+
+interface LicenseObject {
+  name: string;
+  url?: string;
+}
+
+function convertInfoObject(info: InfoObject, openapi: OpenAPIDocument): AsyncAPIDocument['info'] {
   return sortObjectKeys({
       ...info,
       tags: [openapi.tags],
@@ -40,7 +65,20 @@ function convertInfoObject(info: OpenAPIDocument['info'], openapi: OpenAPIDocume
   ]);
 }
 
-function convertServerObjects(servers: Record<string, any>, openapi: OpenAPIDocument): AsyncAPIDocument['servers'] {
+interface ServerObject {
+  url: string;
+  description?: string;
+  variables?: Record<string, ServerVariableObject>;
+}
+
+interface ServerVariableObject {
+  enum?: string[];
+  default: string;
+  description?: string;
+}
+
+
+function convertServerObjects(servers: ServerVariableObject[], openapi: OpenAPIDocument): AsyncAPIDocument['servers'] {
   const newServers: Record<string, any> = {};
   const security: Record<string, any> = openapi.security;
   Object.entries(servers).forEach(([index, server]: [string, any]) => {
@@ -63,7 +101,10 @@ function convertServerObjects(servers: Record<string, any>, openapi: OpenAPIDocu
     delete server.url;
 
     if (security) {
-      server.security = convertSecurity(security);
+      server.security = security.map((securityRequirement: Record<string, any>) => {
+        // pass through the security requirement, conversion will happen in components
+        return securityRequirement;
+      });
       delete openapi.security;
     }
 
@@ -104,232 +145,389 @@ function resolveServerUrl(url: string): {
   return { host, pathname: undefined , protocol: maybeProtocol };
 }
 
-function convertSecurity(security: Record<string, any>): Record<string, any> {
-  return security.map((securityRequirement: Record<string, any>) => {
-      const newSecurityRequirement: Record<string, any> = {};
-      Object.entries(securityRequirement).forEach(([key, value]) => {
-          if (value.type === 'oauth2' && value.flows.authorizationCode?.scopes) {
-              newSecurityRequirement[key] = {
-                  ...value,
-                  flows: {
-                      ...value.flows,
-                      authorizationCode: {
-                          ...value.flows.authorizationCode,
-                          availableScopes: value.flows.authorizationCode.scopes,
-                      },
-                  },
-              };
-              delete newSecurityRequirement[key].flows.authorizationCode.scopes;
-          } else {
-              newSecurityRequirement[key] = value;
-          }
-      });
-      return newSecurityRequirement;
-  });
-}
-
-function convertPathsToChannels(paths: OpenAPIDocument['paths']): AsyncAPIDocument['channels'] {
+function convertPaths(paths: OpenAPIDocument['paths'], perspective: 'client' | 'server'): { 
+  channels: AsyncAPIDocument['channels'], 
+  operations: AsyncAPIDocument['operations'] 
+} {
   const channels: AsyncAPIDocument['channels'] = {};
-
-  Object.entries(paths).forEach(([path, pathItem]:[any,any]) => {
-    const channelName = path.replace(/^\//, '').replace(/\//g, '_');
-    channels[channelName] = {
-      address: path,
-      messages: {}
-    };
-
-    Object.entries(pathItem).forEach(([method, operation]:[any,any]) => {
-      if (['get', 'post', 'put', 'delete', 'patch'].includes(method)) {
-        const parameters = convertParameters(pathItem[method].parameters);
-        if(channels[channelName].parameters) {
-          channels[channelName].parameters = parameters;
-        }
-
-        if(isPlainObject(operation.requestBody)) {
-          const contentTypes = Object.keys(operation.requestBody.content || {});
-          contentTypes.forEach((contentType) => {
-            const messageName = `${operation.operationId || method}Request_${contentType.replace('/', '_')}`;
-            channels[channelName].messages[messageName] = {
-              name: messageName,
-              summary: operation.summary,
-              description: operation.description,
-              tags: operation.tags,
-              externalDocs: operation.externalDocs,
-              payload: operation.requestBody.content[contentType]?.schema || {},
-              bindings: getMessageBindings(undefined, parameters.headers),
-              contentType: contentType,
-            };
-          })
-        }
-
-        if (isPlainObject(operation.responses)) {
-          Object.entries(operation.responses).forEach(([statusCode, response]:[string,any]) => {
-            const contentTypes = Object.keys(response.content || {});
-            if (contentTypes.length === 0) {
-              const messageName = `${operation.operationId || method}Response${statusCode}`;
-              channels[channelName].messages[messageName] = {
-                name: messageName,
-                description: response.description,
-                bindings: getMessageBindings(statusCode, parameters?.headers)
-              };
-            } else {
-              contentTypes.forEach((contentType) => {
-                const messageName = `${operation.operationId || method}Response${statusCode}_${contentType.replace('/', '_')}`;
-                channels[channelName].messages[messageName] = {
-                  name: messageName,
-                  summary: operation.summary,
-                  description: response.description,
-                  tags: operation.tags,
-                  externalDocs: operation.externalDocs,
-                  payload: response.content[contentType]?.schema || {},
-                  bindings: getMessageBindings(statusCode, parameters.headers),
-                  contentType: contentType,
-                };
-              });
-            }
-          }
-        );
-
-        }
-        delete channels[channelName].parameters?.headers;
-        delete channels[channelName].parameters?.query;
-      }
-    });
-  });
-
-  return channels;
-}
-
-function convertPathsToOperations(paths: OpenAPIDocument['paths'], pointOfView: 'server' | 'client'): AsyncAPIDocument['operations'] {
   const operations: AsyncAPIDocument['operations'] = {};
 
-  Object.entries(paths).forEach(([path, pathItem]:[any,any]) => {
-    const channelName = path.replace(/^\//, '').replace(/\//g, '_');
+  for (const [path, pathItemOrRef] of Object.entries(paths)) {
+    if (!isPlainObject(pathItemOrRef)) continue;
 
-    Object.entries(pathItem).forEach(([method, operation]:[any,any]) => {
-      if (['get', 'post', 'put', 'delete', 'patch'].includes(method)) {
-        const operationId = operation.operationId || `${method}${channelName}`;
-        const parameters = convertParameters(pathItem[method].parameters);
+    const pathItem = isRefObject(pathItemOrRef) ? pathItemOrRef : pathItemOrRef as any;
+    const channelName = path.replace(/^\//, '').replace(/\//g, '_') || 'root';
+    channels[channelName] = {
+      address: path,
+      messages: {},
+      parameters: convertPathParameters(pathItem.parameters)
+    };
+
+    for (const [method, operation] of Object.entries(pathItem)) {
+      if (['get', 'post', 'put', 'delete', 'patch'].includes(method) && isPlainObject(operation)) {
+        const operationObject = operation as any;
+        const operationId = operationObject.operationId || `${method}${channelName}`;
+
+        // Convert request body to message
+        if (operationObject.requestBody) {
+          const requestMessages = convertRequestBodyToMessages(operationObject.requestBody, operationId, method);
+          Object.assign(channels[channelName].messages, requestMessages);
+        }
+
+        // Convert responses to messages
+        if (operationObject.responses) {
+          const responseMessages = convertResponsesToMessages(operationObject.responses, operationId, method);
+          Object.assign(channels[channelName].messages, responseMessages);
+        }
+
+        // Create operation
         operations[operationId] = {
-          action: pointOfView === 'server' ? 'receive' : 'send',
-          channel: {
-            $ref: `#/channels/${channelName}`
+          action: perspective === 'client' ? 'send' : 'receive',
+          channel: createRefObject('channels', channelName),
+          summary: operationObject.summary,
+          description: operationObject.description,
+          tags: operationObject.tags?.map((tag: string) => ({ name: tag })),
+          bindings: {
+            http: {
+              method: method.toUpperCase(),
+            }
           },
-          summary: operation.summary,
-          description: operation.description,
-          tags: operation.tags,
-          bindings: getOperationBindings(method, parameters?.query)
+          messages: Object.keys(channels[channelName].messages)
+            .filter(messageName => messageName.startsWith(operationId))
+            .map(messageName => createRefObject('channels', channelName, 'messages', messageName))
         };
 
+        // Convert parameters
+        if (operationObject.parameters) {
+          const params = convertOperationParameters(operationObject.parameters);
+          if (Object.keys(params).length > 0) {
+            channels[channelName].parameters = {
+              ...channels[channelName].parameters,
+              ...params
+            };
+          }
+        }
       }
-    });
+    }
+
+    removeEmptyObjects(channels[channelName]);
+  }
+
+  return { channels, operations };
+}
+
+function convertPathParameters(parameters: any[] = []): Record<string, any> {
+  const convertedParams: Record<string, any> = {};
+  
+  parameters.forEach(param => {
+    if (param.in === 'path') {
+      convertedParams[param.name] = {
+        description: param.description,
+        schema: convertSchema(param.schema)
+      };
+    }
   });
 
-  return operations;
-};
-
-function getOperationBindings(method: string, queryParameters?: Record<string, any>): Record<string, any> {
-  const bindings: Record<string, any> = {
-    http: {
-      bindingVersion: "0.3.0",
-    },
-  };
-
-  if (method) {
-    bindings.http.method = method.toUpperCase();
-  }
-
-  if (queryParameters && Object.keys(queryParameters).length > 0) {
-    bindings.http.query = {...queryParameters};
-  }
-
-  return bindings;
-}
-
-function getMessageBindings(statusCode?: string, headers?: Record<string, any>): Record<string, any> {
-  const bindings: Record<string, any> = {
-    http: {
-      bindingVersion: "0.3.0",
-    },
-  };
-
-  if (statusCode) {
-    bindings.http.statusCode = parseInt(statusCode);
-  }
-
-  if (headers && Object.keys(headers).length > 0) {
-    bindings.http.headers = {...headers};
-  }
-
-  return bindings;
-}
-
-function getChannelBindings(method: string, header?: Record<string, any>, query?: Record<string,any>): Record<string, any> {
-  const bindings: Record<string, any> = {
-    ws: {
-      bindingVersion: "0.1.0",
-    },
-  };
-
-  if (method) {
-    bindings.http.method = method.toUpperCase();
-  }
-
-  if (query && Object.keys(query).length > 0) {
-    bindings.ws.query = {...query};
-  }
-
-  if (header && Object.keys(header).length > 0) {
-    bindings.ws.header = {...header};
-  }
-
-  return bindings;
-}
-
-function convertParameters(parameters: any[]): Record<string, any> {
-  const convertedParams: Record<string, any> = {
-    query: {},
-    headers: {},
-  };
-  
-  if (Array.isArray(parameters)) {
-    parameters.forEach((param) => {
-
-      convertedParams[param.name] = {}
-      convertedParams[param.name].description = param.description;
-      
-      switch (param.in) {
-        case 'query':
-          convertedParams.query[param.name] = param.schema;
-          break;
-        case 'header':
-          convertedParams.headers[param.name] = param.schema;
-          break;
-        case 'cookie':
-          throw new Error('Cookie parameters are not supported in asyncapi');
-      }
-
-    });
-  }
   return convertedParams;
 }
 
-function convertComponents(components: OpenAPIDocument['components']): AsyncAPIDocument['components'] {
-  if (!isPlainObject(components)) {
-    return;
+function convertOperationParameters(parameters: any[]): Record<string, any> {
+  const convertedParams: Record<string, any> = {};
+  
+  parameters.forEach(param => {
+    if (param.in === 'query') {
+      convertedParams[param.name] = {
+        description: param.description,
+        schema: convertSchema(param.schema)
+      };
+    }
+  });
+
+  return convertedParams;
+}
+
+function convertRequestBodyToMessages(requestBody: any, operationId: string, method: string): Record<string, any> {
+  const messages: Record<string, any> = {};
+
+  if (isPlainObject(requestBody.content)) {
+    Object.entries(requestBody.content).forEach(([contentType, mediaType]: [string, any]) => {
+      const messageName = `${operationId}Request`;
+      messages[messageName] = {
+        name: messageName,
+        title: `${method.toUpperCase()} request`,
+        contentType: contentType,
+        payload: convertSchema(mediaType.schema),
+        summary: requestBody.description,
+      };
+    });
   }
 
+  return messages;
+}
+
+function convertResponsesToMessages(responses: Record<string, any>, operationId: string, method: string): Record<string, any> {
+  const messages: Record<string, any> = {};
+
+  Object.entries(responses).forEach(([statusCode, response]) => {
+    if (isPlainObject(response.content)) {
+      Object.entries(response.content).forEach(([contentType, mediaType]: [string, any]) => {
+        const messageName = `${operationId}Response${statusCode}`;
+        messages[messageName] = {
+          name: messageName,
+          title: `${method.toUpperCase()} response ${statusCode}`,
+          contentType: contentType,
+          payload: convertSchema(mediaType.schema),
+          summary: response.description,
+          headers: response.headers ? convertHeadersToSchema(response.headers) : undefined,
+        };
+      });
+    } else {
+      const messageName = `${operationId}Response${statusCode}`;
+      messages[messageName] = {
+        name: messageName,
+        title: `${method.toUpperCase()} response ${statusCode}`,
+        summary: response.description,
+      };
+    }
+  });
+
+  return messages;
+}
+
+function convertComponents(openapi: OpenAPIDocument): AsyncAPIDocument['components'] {
   const asyncComponents: AsyncAPIDocument['components'] = {};
 
-  if (isPlainObject(components.schemas)) {
-    asyncComponents.schemas = components.schemas;
+  if (openapi.components) {
+    if (openapi.components.schemas) {
+      asyncComponents.schemas = convertSchemas(openapi.components.schemas);
+    }
+
+    if (openapi.components.securitySchemes) {
+      asyncComponents.securitySchemes = convertSecuritySchemes(openapi.components.securitySchemes);
+    }
+
+    if (openapi.components.parameters) {
+      asyncComponents.parameters = convertParameters(openapi.components.parameters);
+    }
+
+    if (openapi.components.responses) {
+      asyncComponents.messages = convertComponentResponsesToMessages(openapi.components.responses);
+    }
+
+    if (openapi.components.requestBodies) {
+      asyncComponents.messageTraits = convertRequestBodiesToMessageTraits(openapi.components.requestBodies);
+    }
+
+    if (openapi.components.headers) {
+      asyncComponents.messageTraits = {
+        ...(asyncComponents.messageTraits || {}),
+        ...convertHeadersToMessageTraits(openapi.components.headers)
+      };
+    }
+
+    if (openapi.components.examples) {
+      asyncComponents.examples = openapi.components.examples;  
+    }
   }
-  if (isPlainObject(components.securitySchemes)) {
-    asyncComponents.securitySchemes = components.securitySchemes;
+
+  return removeEmptyObjects(asyncComponents);
+}
+
+function convertSchemas(schemas: Record<string, any>): Record<string, any> {
+  const convertedSchemas: Record<string, any> = {};
+
+  for (const [name, schema] of Object.entries(schemas)) {
+    convertedSchemas[name] = convertSchema(schema);
   }
-  if (isPlainObject(components.parameters)) {
-    asyncComponents.parameters = components.parameters;
+
+  return convertedSchemas;
+}
+
+function convertSchema(schema: any): any {
+  if (isRefObject(schema)) {
+    return schema;
   }
-  
-  return asyncComponents;
+
+  const convertedSchema: any = { ...schema };
+
+  if (schema.properties) {
+    convertedSchema.properties = {};
+    for (const [propName, propSchema] of Object.entries(schema.properties)) {
+      convertedSchema.properties[propName] = convertSchema(propSchema);
+    }
+  }
+
+  if (schema.items) {
+    convertedSchema.items = convertSchema(schema.items);
+  }
+
+  ['allOf', 'anyOf', 'oneOf'].forEach(key => {
+    if (schema[key]) {
+      convertedSchema[key] = schema[key].map(convertSchema);
+    }
+  });
+
+  // Handle formats
+  if (schema.format === 'date-time') {
+    convertedSchema.format = 'date-time';
+  } else if (schema.format === 'byte' || schema.format === 'binary') {
+    delete convertedSchema.format;
+  }
+
+  return convertedSchema;
+}
+
+interface SecuritySchemeObject {
+  type: string;
+  description?: string;
+  name?: string;
+  in?: string;
+  scheme?: string;
+  bearerFormat?: string;
+  flows?: Record<string, OAuthFlowObject>;
+  openIdConnectUrl?: string;
+}
+
+interface OAuthFlowObject {
+  authorizationUrl?: string;
+  tokenUrl?: string;
+  refreshUrl?: string;
+  scopes?: Record<string, string>;
+}
+
+function convertSecuritySchemes(securitySchemes: Record<string, any>): Record<string, any> {
+  const convertedSchemes: Record<string, any> = {};
+
+  for (const [name, scheme] of Object.entries(securitySchemes)) {
+    convertedSchemes[name] = convertSecurityScheme(scheme);
+  }
+
+  return convertedSchemes;
+}
+
+
+
+function convertSecurityScheme(scheme: SecuritySchemeObject): any {
+  const convertedScheme: any = { ...scheme };
+
+  if (scheme.type === 'oauth2' && scheme.flows) {
+    convertedScheme.flows = {};
+    for (const [flowType, flow] of Object.entries(scheme.flows)) {
+      if (isPlainObject(flow)) {
+        convertedScheme.flows[flowType] = convertOAuthFlow(flow);
+      }
+    }
+  }
+
+  if (scheme.type === 'http') {
+    if (scheme.scheme === 'basic') {
+      convertedScheme.type = 'userPassword';
+    } else if (scheme.scheme === 'bearer') {
+      convertedScheme.type = 'httpBearerToken';
+    }
+  }
+
+  if (scheme.type === 'apiKey') {
+    convertedScheme.type = 'httpApiKey';
+  }
+
+  return convertedScheme;
+}
+
+function convertOAuthFlow(flow: OAuthFlowObject): any {
+  return {
+    ...flow,
+    availableScopes: flow.scopes || {},
+    scopes: undefined,
+  };
+}
+
+function convertParameters(parameters: Record<string, any>): Record<string, any> {
+  const convertedParameters: Record<string, any> = {};
+
+  for (const [name, parameter] of Object.entries(parameters)) {
+    if (parameter.in === 'query' || parameter.in === 'path') {
+      convertedParameters[name] = {
+        ...parameter,
+        schema: parameter.schema ? convertSchema(parameter.schema) : undefined,
+      };
+      delete convertedParameters[name].in;
+    }
+  }
+
+  return convertedParameters;
+}
+
+function convertComponentResponsesToMessages(responses: Record<string, any>): Record<string, any> {
+  const messages: Record<string, any> = {};
+
+  for (const [name, response] of Object.entries(responses)) {
+    if (isPlainObject(response.content)) {
+      Object.entries(response.content).forEach(([contentType, mediaType]: [string, any]) => {
+        messages[name] = {
+          name: name,
+          contentType: contentType,
+          payload: convertSchema(mediaType.schema),
+          summary: response.description,
+          headers: response.headers ? convertHeadersToSchema(response.headers) : undefined,
+        };
+      });
+    } else {
+      messages[name] = {
+        name: name,
+        summary: response.description,
+      };
+    }
+  }
+
+  return messages;
+}
+
+function convertRequestBodiesToMessageTraits(requestBodies: Record<string, any>): Record<string, any> {
+  const messageTraits: Record<string, any> = {};
+
+  for (const [name, requestBody] of Object.entries(requestBodies)) {
+    if (requestBody.content) {
+      const contentType = Object.keys(requestBody.content)[0];
+      messageTraits[name] = {
+        name: name,
+        summary: requestBody.description,
+        contentType: contentType,
+        payload: convertSchema(requestBody.content[contentType].schema),
+      };
+    }
+  }
+
+  return messageTraits;
+}
+
+function convertHeadersToMessageTraits(headers: Record<string, any>): Record<string, any> {
+  const messageTraits: Record<string, any> = {};
+
+  for (const [name, header] of Object.entries(headers)) {
+    messageTraits[`Header${name}`] = {
+      headers: {
+        type: 'object',
+        properties: {
+          [name]: convertSchema(header.schema),
+        },
+        required: [name],
+      },
+    };
+  }
+
+  return messageTraits;
+}
+
+function convertHeadersToSchema(headers: Record<string, any>): any {
+  const properties: Record<string, any> = {};
+
+  for (const [name, header] of Object.entries(headers)) {
+    properties[name] = convertSchema(header.schema);
+  }
+
+  return {
+    type: 'object',
+    properties,
+  };
 }
