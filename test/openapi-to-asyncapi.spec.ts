@@ -11,4 +11,22 @@ describe("convert() - openapi to asyncapi", () => {
     const result = convertOpenAPI(input);
     assertResults(output, result);
   });
+  it("should convert the openapi operation and parameter keywoards to asyncapi", () => {
+    const input = fs.readFileSync(path.resolve(__dirname, "input", "openapi", "operation_and_parameter.yml"), "utf8");
+    const output = fs.readFileSync(path.resolve(__dirname, "output", "openapi-to-asyncapi", "operation_and_parameter.yml"), "utf8");
+    const result = convertOpenAPI(input);
+    assertResults(output, result);
+  });
+  it("should convert the openapi components and securitySchemes keywoards to asyncapi", () => {
+    const input = fs.readFileSync(path.resolve(__dirname, "input", "openapi", "components_and_security.yml"), "utf8");
+    const output = fs.readFileSync(path.resolve(__dirname, "output", "openapi-to-asyncapi", "components_and_security.yml"), "utf8");
+    const result = convertOpenAPI(input);
+    assertResults(output, result);
+  });
+  it("should convert the openapi contents and callbacks keywoards to asyncapi", () => {
+    const input = fs.readFileSync(path.resolve(__dirname, "input", "openapi", "callbacks_and_contents.yml"), "utf8");
+    const output = fs.readFileSync(path.resolve(__dirname, "output", "openapi-to-asyncapi", "callbacks_and_contents.yml"), "utf8");
+    const result = convertOpenAPI(input);
+    assertResults(output, result);
+  });
 });

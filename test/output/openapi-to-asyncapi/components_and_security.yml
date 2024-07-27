@@ -1,0 +1,107 @@
+asyncapi: 3.0.0
+info:
+  title: Components and Security API
+  version: 1.0.0
+  description: An API showcasing various components and security schemes
+servers:
+  example_com_v1:
+    host: api.example.com
+    pathname: /v1
+    protocol: https
+channels:
+  secure:
+    address: /secure
+    messages:
+      getsecureResponse200:
+        name: getsecureResponse200
+        title: GET response 200
+        contentType: application/json
+        payload:
+          $ref: '#/components/schemas/SecureResponse'
+        summary: Successful response
+  oauth:
+    address: /oauth
+    messages:
+      getoauthResponse200:
+        name: getoauthResponse200
+        title: GET response 200
+        contentType: application/json
+        payload:
+          $ref: '#/components/schemas/OAuthResponse'
+        summary: Successful response
+operations:
+  getsecure:
+    action: receive
+    channel:
+      $ref: '#/channels/secure'
+    summary: Secure endpoint
+    bindings:
+      http:
+        method: GET
+    messages:
+      - $ref: '#/channels/secure/messages/getsecureResponse200'
+  getoauth:
+    action: receive
+    channel:
+      $ref: '#/channels/oauth'
+    summary: OAuth protected endpoint
+    bindings:
+      http:
+        method: GET
+    messages:
+      - $ref: '#/channels/oauth/messages/getoauthResponse200'
+components:
+  schemas:
+    SecureResponse:
+      type: object
+      properties:
+        message:
+          type: string
+    OAuthResponse:
+      type: object
+      properties:
+        data:
+          type: string
+    Error:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+    oAuth2:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: 'https://example.com/oauth/authorize'
+          tokenUrl: 'https://example.com/oauth/token'
+          availableScopes:
+            read: Read access
+            write: Write access
+  parameters:
+    limitParam:
+      description: Maximum number of items to return
+      location: $message.header#/limit
+  messages:
+    NotFound:
+      name: NotFound
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/Error'
+      summary: Resource not found
+  messageTraits:
+    ItemInput:
+      name: ItemInput
+      contentType: application/json
+    HeaderX-Rate-Limit:
+      headers:
+        type: object
+        properties:
+          X-Rate-Limit:
+            type: integer
+        required:
+          - X-Rate-Limit

@@ -1,0 +1,141 @@
+asyncapi: 3.0.0
+info:
+  title: Operations and Parameters API
+  version: 1.0.0
+  description: An API showcasing various operations and parameter types
+servers:
+  example_com_v1:
+    host: api.example.com
+    pathname: /v1
+    protocol: https
+channels:
+  items:
+    address: /items
+    messages:
+      listItemsResponse200:
+        name: listItemsResponse200
+        title: GET response 200
+        contentType: application/json
+        payload:
+          type: array
+          items:
+            $ref: '#/components/schemas/Item'
+        summary: Successful response
+      createItemRequest:
+        name: createItemRequest
+        title: POST request
+        contentType: application/json
+        payload:
+          $ref: '#/components/schemas/ItemInput'
+      createItemResponse201:
+        name: createItemResponse201
+        title: POST response 201
+        contentType: application/json
+        payload:
+          $ref: '#/components/schemas/Item'
+        summary: Created
+    parameters:
+      limit:
+        description: Maximum number of items to return
+        location: $message.header#/limit
+      offset:
+        description: Number of items to skip
+        location: $message.header#/offset
+  'items_{itemId}':
+    address: '/items/{itemId}'
+    messages:
+      getItemResponse200:
+        name: getItemResponse200
+        title: GET response 200
+        contentType: application/json
+        payload:
+          $ref: '#/components/schemas/Item'
+        summary: Successful response
+      updateItemRequest:
+        name: updateItemRequest
+        title: PUT request
+        contentType: application/json
+        payload:
+          $ref: '#/components/schemas/ItemInput'
+      updateItemResponse200:
+        name: updateItemResponse200
+        title: PUT response 200
+        contentType: application/json
+        payload:
+          $ref: '#/components/schemas/Item'
+        summary: Successful response
+      deleteItemResponse204:
+        name: deleteItemResponse204
+        title: DELETE response 204
+        summary: Successful response
+operations:
+  listItems:
+    action: receive
+    channel:
+      $ref: '#/channels/items'
+    summary: List items
+    bindings:
+      http:
+        method: GET
+    messages:
+      - $ref: '#/channels/items/messages/listItemsResponse200'
+  createItem:
+    action: receive
+    channel:
+      $ref: '#/channels/items'
+    summary: Create an item
+    bindings:
+      http:
+        method: POST
+    messages:
+      - $ref: '#/channels/items/messages/createItemRequest'
+      - $ref: '#/channels/items/messages/createItemResponse201'
+  getItem:
+    action: receive
+    channel:
+      $ref: '#/channels/items_{itemId}'
+    summary: Get an item
+    bindings:
+      http:
+        method: GET
+    messages:
+      - $ref: '#/channels/items_{itemId}/messages/getItemResponse200'
+  updateItem:
+    action: receive
+    channel:
+      $ref: '#/channels/items_{itemId}'
+    summary: Update an item
+    bindings:
+      http:
+        method: PUT
+    messages:
+      - $ref: '#/channels/items_{itemId}/messages/updateItemRequest'
+      - $ref: '#/channels/items_{itemId}/messages/updateItemResponse200'
+  deleteItem:
+    action: receive
+    channel:
+      $ref: '#/channels/items_{itemId}'
+    summary: Delete an item
+    bindings:
+      http:
+        method: DELETE
+    messages:
+      - $ref: '#/channels/items_{itemId}/messages/deleteItemResponse204'
+components:
+  schemas:
+    Item:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+    ItemInput:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string

@@ -220,11 +220,8 @@ function convertPathParameters(parameters: any[] = []): Record<string, any> {
   const convertedParams: Record<string, any> = {};
   
   parameters.forEach(param => {
-    if (param.in === 'path') {
-      convertedParams[param.name] = {
-        description: param.description,
-        schema: convertSchema(param.schema)
-      };
+    if (!isRefObject(param) && param.in === 'path') {
+      convertedParams[param.name] = convertParameter(param);
     }
   });
 
@@ -235,15 +232,54 @@ function convertOperationParameters(parameters: any[]): Record<string, any> {
   const convertedParams: Record<string, any> = {};
   
   parameters.forEach(param => {
-    if (param.in === 'query') {
-      convertedParams[param.name] = {
-        description: param.description,
-        schema: convertSchema(param.schema)
-      };
+    if (!isRefObject(param) && param.in === 'query') {
+      convertedParams[param.name] = convertParameter(param);
     }
   });
 
   return convertedParams;
+}
+
+function convertParameter(param: any): any {
+  const convertedParam: any = {
+    description: param.description
+  };
+
+  if (param.schema) {
+    if (!isRefObject(param.schema)) {
+      if (param.schema.enum) {
+        convertedParam.enum = param.schema.enum;
+      }
+      if (param.schema.default !== undefined) {
+        convertedParam.default = param.schema.default;
+      }
+    }
+  }
+
+  if (param.examples) {
+    convertedParam.examples = Object.values(param.examples).map((example:any) => 
+      isRefObject(example) ? example : example.value
+    );
+  }
+
+  // the location based on the parameter's 'in' property
+  switch (param.in) {
+    case 'query':
+    case 'header':
+      convertedParam.location = `$message.header#/${param.name}`;
+      break;
+    case 'path':
+    case 'cookie':
+      // For path and cookie parameters, we' have put them in the payload
+      // as AsyncAPI doesn't have a direct equivalent
+      convertedParam.location = `$message.payload#/${param.name}`;
+      break;
+    default:
+      // If 'in' is not recognized, default to payload
+      convertedParam.location = `$message.payload#/${param.name}`;
+  }
+
+  return convertedParam;
 }
 
 function convertRequestBodyToMessages(requestBody: any, operationId: string, method: string): Record<string, any> {
@@ -307,7 +343,14 @@ function convertComponents(openapi: OpenAPIDocument): AsyncAPIDocument['componen
     }
 
     if (openapi.components.parameters) {
-      asyncComponents.parameters = convertParameters(openapi.components.parameters);
+      asyncComponents.parameters = {};
+      for (const [name, param] of Object.entries(openapi.components.parameters)) {
+        if (!isRefObject(param)) {
+          asyncComponents.parameters[name] = convertParameter(param);
+        } else {
+          asyncComponents.parameters[name] = param; 
+        }
+      }
     }
 
     if (openapi.components.responses) {
@@ -405,57 +448,42 @@ function convertSecuritySchemes(securitySchemes: Record<string, any>): Record<st
   return convertedSchemes;
 }
 
-
-
-function convertSecurityScheme(scheme: SecuritySchemeObject): any {
-  const convertedScheme: any = { ...scheme };
+function convertSecurityScheme(scheme: any): any {
+  const convertedScheme: any = {
+    type: scheme.type,
+    description: scheme.description
+  };
 
   if (scheme.type === 'oauth2' && scheme.flows) {
-    convertedScheme.flows = {};
-    for (const [flowType, flow] of Object.entries(scheme.flows)) {
-      if (isPlainObject(flow)) {
-        convertedScheme.flows[flowType] = convertOAuthFlow(flow);
+    const newFlows = JSON.parse(JSON.stringify(scheme.flows));
+    function convertScopesToAvailableScopes(obj: any) {
+      for (const key in obj) {
+        if (obj.hasOwnProperty(key)) {
+          if (key === 'scopes') {
+            obj['availableScopes'] = obj[key];
+            delete obj[key];
+          } else if (typeof obj[key] === 'object') {
+            convertScopesToAvailableScopes(obj[key]);
+          }
+        }
       }
     }
-  }
-
-  if (scheme.type === 'http') {
-    if (scheme.scheme === 'basic') {
-      convertedScheme.type = 'userPassword';
-    } else if (scheme.scheme === 'bearer') {
-      convertedScheme.type = 'httpBearerToken';
+    convertScopesToAvailableScopes(newFlows);
+    convertedScheme.flows = newFlows;
+    if (scheme.scopes) {
+      convertedScheme.scopes = Object.keys(scheme.scopes);
     }
-  }
-
-  if (scheme.type === 'apiKey') {
-    convertedScheme.type = 'httpApiKey';
+  } else if (scheme.type === 'http') {
+    convertedScheme.scheme = scheme.scheme;
+    if (scheme.scheme === 'bearer') {
+      convertedScheme.bearerFormat = scheme.bearerFormat;
+    }
+  } else if (scheme.type === 'apiKey') {
+    convertedScheme.in = scheme.in;
+    convertedScheme.name = scheme.name;
   }
 
   return convertedScheme;
-}
-
-function convertOAuthFlow(flow: OAuthFlowObject): any {
-  return {
-    ...flow,
-    availableScopes: flow.scopes || {},
-    scopes: undefined,
-  };
-}
-
-function convertParameters(parameters: Record<string, any>): Record<string, any> {
-  const convertedParameters: Record<string, any> = {};
-
-  for (const [name, parameter] of Object.entries(parameters)) {
-    if (parameter.in === 'query' || parameter.in === 'path') {
-      convertedParameters[name] = {
-        ...parameter,
-        schema: parameter.schema ? convertSchema(parameter.schema) : undefined,
-      };
-      delete convertedParameters[name].in;
-    }
-  }
-
-  return convertedParameters;
 }
 
 function convertComponentResponsesToMessages(responses: Record<string, any>): Record<string, any> {
@@ -483,18 +511,23 @@ function convertComponentResponsesToMessages(responses: Record<string, any>): Re
   return messages;
 }
 
-function convertRequestBodiesToMessageTraits(requestBodies: Record<string, any>): Record<string, any> {
+function convertRequestBodiesToMessageTraits(requestBodies: Record<string,any>): Record<string, any> {
   const messageTraits: Record<string, any> = {};
 
-  for (const [name, requestBody] of Object.entries(requestBodies)) {
-    if (requestBody.content) {
-      const contentType = Object.keys(requestBody.content)[0];
+  for (const [name, requestBodyOrRef] of Object.entries(requestBodies)) {
+    if (!isRefObject(requestBodyOrRef) && requestBodyOrRef.content) {
+      const contentType = Object.keys(requestBodyOrRef.content)[0];
       messageTraits[name] = {
         name: name,
-        summary: requestBody.description,
         contentType: contentType,
-        payload: convertSchema(requestBody.content[contentType].schema),
+        description: requestBodyOrRef.description,
       };
+
+      if (requestBodyOrRef.content[contentType].schema && 
+          requestBodyOrRef.content[contentType].schema.properties && 
+          requestBodyOrRef.content[contentType].schema.properties.headers) {
+        messageTraits[name].headers = requestBodyOrRef.content[contentType].schema.properties.headers;
+      }
     }
   }
 
