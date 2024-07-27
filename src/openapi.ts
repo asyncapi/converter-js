@@ -152,65 +152,67 @@ function convertPaths(paths: OpenAPIDocument['paths'], perspective: 'client' | '
   const channels: AsyncAPIDocument['channels'] = {};
   const operations: AsyncAPIDocument['operations'] = {};
 
-  for (const [path, pathItemOrRef] of Object.entries(paths)) {
-    if (!isPlainObject(pathItemOrRef)) continue;
-
-    const pathItem = isRefObject(pathItemOrRef) ? pathItemOrRef : pathItemOrRef as any;
-    const channelName = path.replace(/^\//, '').replace(/\//g, '_') || 'root';
-    channels[channelName] = {
-      address: path,
-      messages: {},
-      parameters: convertPathParameters(pathItem.parameters)
-    };
-
-    for (const [method, operation] of Object.entries(pathItem)) {
-      if (['get', 'post', 'put', 'delete', 'patch'].includes(method) && isPlainObject(operation)) {
-        const operationObject = operation as any;
-        const operationId = operationObject.operationId || `${method}${channelName}`;
-
-        // Convert request body to message
-        if (operationObject.requestBody) {
-          const requestMessages = convertRequestBodyToMessages(operationObject.requestBody, operationId, method);
-          Object.assign(channels[channelName].messages, requestMessages);
-        }
-
-        // Convert responses to messages
-        if (operationObject.responses) {
-          const responseMessages = convertResponsesToMessages(operationObject.responses, operationId, method);
-          Object.assign(channels[channelName].messages, responseMessages);
-        }
-
-        // Create operation
-        operations[operationId] = {
-          action: perspective === 'client' ? 'send' : 'receive',
-          channel: createRefObject('channels', channelName),
-          summary: operationObject.summary,
-          description: operationObject.description,
-          tags: operationObject.tags?.map((tag: string) => ({ name: tag })),
-          bindings: {
-            http: {
-              method: method.toUpperCase(),
+  if(paths) {
+    for (const [path, pathItemOrRef] of Object.entries(paths)) {
+      if (!isPlainObject(pathItemOrRef)) continue;
+  
+      const pathItem = isRefObject(pathItemOrRef) ? pathItemOrRef : pathItemOrRef as any;
+      const channelName = path.replace(/^\//, '').replace(/\//g, '_') || 'root';
+      channels[channelName] = {
+        address: path,
+        messages: {},
+        parameters: convertPathParameters(pathItem.parameters)
+      };
+  
+      for (const [method, operation] of Object.entries(pathItem)) {
+        if (['get', 'post', 'put', 'delete', 'patch'].includes(method) && isPlainObject(operation)) {
+          const operationObject = operation as any;
+          const operationId = operationObject.operationId || `${method}${channelName}`;
+  
+          // Convert request body to message
+          if (operationObject.requestBody) {
+            const requestMessages = convertRequestBodyToMessages(operationObject.requestBody, operationId, method);
+            Object.assign(channels[channelName].messages, requestMessages);
+          }
+  
+          // Convert responses to messages
+          if (operationObject.responses) {
+            const responseMessages = convertResponsesToMessages(operationObject.responses, operationId, method);
+            Object.assign(channels[channelName].messages, responseMessages);
+          }
+  
+          // Create operation
+          operations[operationId] = {
+            action: perspective === 'client' ? 'send' : 'receive',
+            channel: createRefObject('channels', channelName),
+            summary: operationObject.summary,
+            description: operationObject.description,
+            tags: operationObject.tags?.map((tag: string) => ({ name: tag })),
+            bindings: {
+              http: {
+                method: method.toUpperCase(),
+              }
+            },
+            messages: Object.keys(channels[channelName].messages)
+              .filter(messageName => messageName.startsWith(operationId))
+              .map(messageName => createRefObject('channels', channelName, 'messages', messageName))
+          };
+  
+          // Convert parameters
+          if (operationObject.parameters) {
+            const params = convertOperationParameters(operationObject.parameters);
+            if (Object.keys(params).length > 0) {
+              channels[channelName].parameters = {
+                ...channels[channelName].parameters,
+                ...params
+              };
             }
-          },
-          messages: Object.keys(channels[channelName].messages)
-            .filter(messageName => messageName.startsWith(operationId))
-            .map(messageName => createRefObject('channels', channelName, 'messages', messageName))
-        };
-
-        // Convert parameters
-        if (operationObject.parameters) {
-          const params = convertOperationParameters(operationObject.parameters);
-          if (Object.keys(params).length > 0) {
-            channels[channelName].parameters = {
-              ...channels[channelName].parameters,
-              ...params
-            };
           }
         }
       }
+  
+      removeEmptyObjects(channels[channelName]);
     }
-
-    removeEmptyObjects(channels[channelName]);
   }
 
   return { channels, operations };
