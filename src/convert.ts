@@ -7,7 +7,7 @@ import { converters as openapiConverters } from "./openapi";
 
 import { serializeInput } from "./utils";
 
-import type { AsyncAPIDocument, AsyncAPIConvertVersion, OpenAPIConvertVersion, ConvertOptions, ConvertFunction, ConvertOpenAPIFunction, OpenAPIDocument } from './interfaces';
+import type { AsyncAPIDocument, AsyncAPIConvertVersion, OpenAPIConvertVersion, ConvertOptions, ConvertFunction, ConvertOpenAPIFunction, OpenAPIDocument, OpenAPIToAsyncAPIOptions } from './interfaces';
 
 /**
  * Value for key (version) represents the function which converts specification from previous version to the given as key.
@@ -57,13 +57,15 @@ export function convert(input: string | AsyncAPIDocument, version: AsyncAPIConve
   return converted;
 }
 
-export function convertOpenAPI(input: string ,options?: ConvertOptions): string;
-export function convertOpenAPI(input: OpenAPIDocument ,options?: ConvertOptions): AsyncAPIDocument;
-export function convertOpenAPI(input: string | OpenAPIDocument,options: ConvertOptions = {}): string | AsyncAPIDocument {
+export function convertOpenAPI(input: string ,version: OpenAPIConvertVersion,options?: OpenAPIToAsyncAPIOptions): string;
+export function convertOpenAPI(input: OpenAPIDocument, version: OpenAPIConvertVersion ,options?: OpenAPIToAsyncAPIOptions): AsyncAPIDocument;
+export function convertOpenAPI(input: string | OpenAPIDocument, version: OpenAPIConvertVersion, options: OpenAPIToAsyncAPIOptions = {}): string | AsyncAPIDocument {
 
   const { format, document } = serializeInput(input);
+  const openApiVersion = document.openapi;
+  const converterVersion = openApiVersion === '3.0.0' ? '3.0.0' : openApiVersion;
 
-  const openapiToAsyncapiConverter = openapiConverters["openapi" as OpenAPIConvertVersion] as ConvertOpenAPIFunction;
+  const openapiToAsyncapiConverter = openapiConverters[converterVersion as OpenAPIConvertVersion] as ConvertOpenAPIFunction;
 
   if (!openapiToAsyncapiConverter) {
     throw new Error("OpenAPI to AsyncAPI converter is not available.");

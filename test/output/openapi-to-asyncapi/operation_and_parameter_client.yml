@@ -70,7 +70,7 @@ channels:
         summary: Successful response
 operations:
   listItems:
-    action: receive
+    action: send
     channel:
       $ref: '#/channels/items'
     summary: List items
@@ -83,7 +83,7 @@ operations:
       messages:
         - $ref: '#/channels/items/messages/listItemsResponse200'
   createItem:
-    action: receive
+    action: send
     channel:
       $ref: '#/channels/items'
     summary: Create an item
@@ -98,7 +98,7 @@ operations:
       messages:
         - $ref: '#/channels/items/messages/createItemResponse201'
   getItem:
-    action: receive
+    action: send
     channel:
       $ref: '#/channels/items_{itemId}'
     summary: Get an item
@@ -111,7 +111,7 @@ operations:
       messages:
         - $ref: '#/channels/items_{itemId}/messages/getItemResponse200'
   updateItem:
-    action: receive
+    action: send
     channel:
       $ref: '#/channels/items_{itemId}'
     summary: Update an item
@@ -126,7 +126,7 @@ operations:
       messages:
         - $ref: '#/channels/items_{itemId}/messages/updateItemResponse200'
   deleteItem:
-    action: receive
+    action: send
     channel:
       $ref: '#/channels/items_{itemId}'
     summary: Delete an item

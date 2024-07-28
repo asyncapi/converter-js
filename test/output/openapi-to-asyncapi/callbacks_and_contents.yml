@@ -91,7 +91,11 @@ operations:
         method: POST
     messages:
       - $ref: '#/channels/webhooks/messages/subscribeWebhookRequest'
-      - $ref: '#/channels/webhooks/messages/subscribeWebhookResponse201'
+    reply:
+      channel:
+        $ref: '#/channels/webhooks'
+      messages:
+        - $ref: '#/channels/webhooks/messages/subscribeWebhookResponse201'
   getUser:
     action: receive
     channel:
@@ -100,8 +104,11 @@ operations:
     bindings:
       http:
         method: GET
-    messages:
-      - $ref: '#/channels/users_{userId}/messages/getUserResponse200'
+    reply:
+      channel:
+        $ref: '#/channels/users_{userId}'
+      messages:
+        - $ref: '#/channels/users_{userId}/messages/getUserResponse200'
   getUserPosts:
     action: receive
     channel:
@@ -110,8 +117,11 @@ operations:
     bindings:
       http:
         method: GET
-    messages:
-      - $ref: '#/channels/users_{userId}_posts/messages/getUserPostsResponse200'
+    reply:
+      channel:
+        $ref: '#/channels/users_{userId}_posts'
+      messages:
+        - $ref: '#/channels/users_{userId}_posts/messages/getUserPostsResponse200'
   uploadFile:
     action: receive
     channel:
@@ -122,7 +132,11 @@ operations:
         method: POST
     messages:
       - $ref: '#/channels/upload/messages/uploadFileRequest'
-      - $ref: '#/channels/upload/messages/uploadFileResponse200'
+    reply:
+      channel:
+        $ref: '#/channels/upload'
+      messages:
+        - $ref: '#/channels/upload/messages/uploadFileResponse200'
   getStream:
     action: receive
     channel:
@@ -131,23 +145,30 @@ operations:
     bindings:
       http:
         method: GET
-    messages:
-      - $ref: '#/channels/stream/messages/getStreamResponse200'
+    reply:
+      channel:
+        $ref: '#/channels/stream'
+      messages:
+        - $ref: '#/channels/stream/messages/getStreamResponse200'
 components:
   schemas:
     User:
-      type: object
-      properties:
-        id:
-          type: string
-        name:
-          type: string
+      schemaFormat: application/vnd.oai.openapi;version=3.0.0
+      schema:
+        type: object
+        properties:
+          id:
+            type: string
+          name:
+            type: string
     Post:
-      type: object
-      properties:
-        id:
-          type: string
-        title:
-          type: string
-        content:
-          type: string
+      schemaFormat: application/vnd.oai.openapi;version=3.0.0
+      schema:
+        type: object
+        properties:
+          id:
+            type: string
+          title:
+            type: string
+          content:
+            type: string

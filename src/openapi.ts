@@ -1,12 +1,18 @@
 import { sortObjectKeys, isRefObject, isPlainObject, removeEmptyObjects, createRefObject } from "./utils";
-import { AsyncAPIDocument, ConvertOpenAPIFunction, ConvertOptions, OpenAPIDocument } from "./interfaces";
+import { AsyncAPIDocument, ConvertOpenAPIFunction, OpenAPIToAsyncAPIOptions, OpenAPIDocument } from "./interfaces";
 
 export const converters: Record<string, ConvertOpenAPIFunction > = {
-  'openapi': from_openapi_to_asyncapi,
+  '3.0.0': from_openapi_to_asyncapi,
 }
 
-function from_openapi_to_asyncapi(openapi: OpenAPIDocument, options: ConvertOptions={}): AsyncAPIDocument {
-  const perspective = options.v2tov3?.pointOfView === 'client' ? 'client' : 'server';
+/**
+ * Converts an OpenAPI document to an AsyncAPI document.
+ * @param {OpenAPIDocument} openapi - The OpenAPI document to convert.
+ * @param {ConvertOptions} options - Conversion options.
+ * @returns {AsyncAPIDocument} The converted AsyncAPI document.
+ */
+function from_openapi_to_asyncapi(openapi: OpenAPIDocument, options: OpenAPIToAsyncAPIOptions = {}): AsyncAPIDocument {
+  const perspective = options.perspective || 'server';
   const asyncapi: Partial<AsyncAPIDocument> = {
       asyncapi: '3.0.0',
       info: convertInfoObject(openapi.info, openapi),
@@ -48,6 +54,12 @@ interface LicenseObject {
   url?: string;
 }
 
+/**
+ * Converts openAPI info objects to asyncAPI info objects.
+ * @param info - The openAPI info object to convert.
+ * @param openapi - The complete openAPI document.
+ * @returns openAPI info object
+ */
 function convertInfoObject(info: InfoObject, openapi: OpenAPIDocument): AsyncAPIDocument['info'] {
   return sortObjectKeys({
       ...info,
@@ -77,11 +89,16 @@ interface ServerVariableObject {
   description?: string;
 }
 
-
+/**
+ * Converts OpenAPI server objects to AsyncAPI server objects.
+ * @param {ServerObject[]} servers - The OpenAPI server objects to convert.
+ * @param {OpenAPIDocument} openapi - The complete OpenAPI document.
+ * @returns {AsyncAPIDocument['servers']} The converted AsyncAPI server objects.
+ */
 function convertServerObjects(servers: ServerVariableObject[], openapi: OpenAPIDocument): AsyncAPIDocument['servers'] {
   const newServers: Record<string, any> = {};
   const security: Record<string, any> = openapi.security;
-  Object.entries(servers).forEach(([index, server]: [string, any]) => {
+  servers.forEach((server: any) => {
     
     const serverName = generateServerName(server.url);
     if (isRefObject(server)) {
@@ -145,6 +162,12 @@ function resolveServerUrl(url: string): {
   return { host, pathname: undefined , protocol: maybeProtocol };
 }
 
+/**
+ * Converts OpenAPI paths to AsyncAPI channels and operations.
+ * @param {Record<string, any>} paths - The OpenAPI paths object.
+ * @param {'client' | 'server'} perspective - The perspective of the conversion (client or server).
+ * @returns {{ channels: AsyncAPIDocument['channels'], operations: AsyncAPIDocument['operations'] }}
+ */
 function convertPaths(paths: OpenAPIDocument['paths'], perspective: 'client' | 'server'): { 
   channels: AsyncAPIDocument['channels'], 
   operations: AsyncAPIDocument['operations'] 
@@ -165,7 +188,7 @@ function convertPaths(paths: OpenAPIDocument['paths'], perspective: 'client' | '
       };
   
       for (const [method, operation] of Object.entries(pathItem)) {
-        if (['get', 'post', 'put', 'delete', 'patch'].includes(method) && isPlainObject(operation)) {
+        if (['get', 'post', 'put', 'delete', 'patch', 'options', 'head', 'trace'].includes(method) && isPlainObject(operation)) {
           const operationObject = operation as any;
           const operationId = operationObject.operationId || `${method}${channelName}`;
   
@@ -193,10 +216,20 @@ function convertPaths(paths: OpenAPIDocument['paths'], perspective: 'client' | '
                 method: method.toUpperCase(),
               }
             },
-            messages: Object.keys(channels[channelName].messages)
-              .filter(messageName => messageName.startsWith(operationId))
-              .map(messageName => createRefObject('channels', channelName, 'messages', messageName))
+            messages: operationObject.requestBody 
+            ? [createRefObject('channels', channelName, 'messages', `${operationId}Request`)]
+            : [],
           };
+
+          // Add reply section if there are responses
+        if (operationObject.responses && Object.keys(operationObject.responses).length > 0) {
+          operations[operationId].reply = {
+            channel: createRefObject('channels', channelName),
+            messages: Object.entries(operationObject.responses).map(([statusCode, response]) => 
+              createRefObject('channels', channelName, 'messages', `${operationId}Response${statusCode}`)
+            )
+          };
+        }
   
           // Convert parameters
           if (operationObject.parameters) {
@@ -218,6 +251,11 @@ function convertPaths(paths: OpenAPIDocument['paths'], perspective: 'client' | '
   return { channels, operations };
 }
 
+/**
+ * Converts OpenAPI path parameters to AsyncAPI channel parameters.
+ * @param {any[]} parameters - The OpenAPI path parameters.
+ * @returns {Record<string, any>} The converted AsyncAPI channel parameters.
+ */
 function convertPathParameters(parameters: any[] = []): Record<string, any> {
   const convertedParams: Record<string, any> = {};
   
@@ -230,6 +268,11 @@ function convertPathParameters(parameters: any[] = []): Record<string, any> {
   return convertedParams;
 }
 
+/**
+ * Converts OpenAPI operatiion parameters to AsyncAPI operation parameters.
+ * @param {any[]} parameters - The OpenAPI operation parameters.
+ * @returns {Record<string, any>} The converted AsyncAPI operation parameters.
+ */
 function convertOperationParameters(parameters: any[]): Record<string, any> {
   const convertedParams: Record<string, any> = {};
   
@@ -242,6 +285,11 @@ function convertOperationParameters(parameters: any[]): Record<string, any> {
   return convertedParams;
 }
 
+/**
+ * Converts an OpenAPI Parameter Object to an AsyncAPI Parameter Object.
+ * @param {ParameterObject} param - The OpenAPI Parameter Object.
+ * @returns {any} The converted AsyncAPI Parameter Object.
+ */
 function convertParameter(param: any): any {
   const convertedParam: any = {
     description: param.description
@@ -268,13 +316,11 @@ function convertParameter(param: any): any {
   switch (param.in) {
     case 'query':
     case 'header':
+    case 'cookie':
       convertedParam.location = `$message.header#/${param.name}`;
       break;
     case 'path':
-    case 'cookie':
-      // For path and cookie parameters, we' have put them in the payload
-      // as AsyncAPI doesn't have a direct equivalent
-      convertedParam.location = `$message.payload#/${param.name}`;
+      // Path parameters are part of the channel address
       break;
     default:
       // If 'in' is not recognized, default to payload
@@ -303,6 +349,13 @@ function convertRequestBodyToMessages(requestBody: any, operationId: string, met
   return messages;
 }
 
+/**
+ * Converts OpenAPI Response Objects to AsyncAPI Message Objects.
+ * @param {ResponsesObject} responses - The OpenAPI Response Objects to convert.
+ * @param {string} operationId - The ID of the operation these responses belong to.
+ * @param {string} method - The HTTP method of the operation.
+ * @returns {Record<string, any>} A record of converted AsyncAPI Message Objects.
+ */
 function convertResponsesToMessages(responses: Record<string, any>, operationId: string, method: string): Record<string, any> {
   const messages: Record<string, any> = {};
 
@@ -332,6 +385,11 @@ function convertResponsesToMessages(responses: Record<string, any>, operationId:
   return messages;
 }
 
+/**
+ * Converts OpenAPI Components Object to AsyncAPI Components Object.
+ * @param {OpenAPIDocument} openapi - The complete OpenAPI document.
+ * @returns {AsyncAPIDocument['components']} The converted AsyncAPI Components Object.
+ */
 function convertComponents(openapi: OpenAPIDocument): AsyncAPIDocument['components'] {
   const asyncComponents: AsyncAPIDocument['components'] = {};
 
@@ -378,16 +436,29 @@ function convertComponents(openapi: OpenAPIDocument): AsyncAPIDocument['componen
   return removeEmptyObjects(asyncComponents);
 }
 
+/**
+ * Converts OpenAPI Schema Objects to AsyncAPI Schema Objects.
+ * @param {Record<string, any>} schemas - The OpenAPI Schema Objects to convert.
+ * @returns {Record<string, any>} The converted AsyncAPI Schema Objects.
+ */
 function convertSchemas(schemas: Record<string, any>): Record<string, any> {
   const convertedSchemas: Record<string, any> = {};
 
   for (const [name, schema] of Object.entries(schemas)) {
-    convertedSchemas[name] = convertSchema(schema);
+    convertedSchemas[name] = {
+      schemaFormat: 'application/vnd.oai.openapi;version=3.0.0',
+      schema: schema
+    };
   }
 
   return convertedSchemas;
 }
 
+/**
+ * Converts a single OpenAPI Schema Object to an AsyncAPI Schema Object.
+ * @param {any} schema - The OpenAPI Schema Object to convert.
+ * @returns {any} The converted AsyncAPI Schema Object.
+ */
 function convertSchema(schema: any): any {
   if (isRefObject(schema)) {
     return schema;
@@ -422,24 +493,11 @@ function convertSchema(schema: any): any {
   return convertedSchema;
 }
 
-interface SecuritySchemeObject {
-  type: string;
-  description?: string;
-  name?: string;
-  in?: string;
-  scheme?: string;
-  bearerFormat?: string;
-  flows?: Record<string, OAuthFlowObject>;
-  openIdConnectUrl?: string;
-}
-
-interface OAuthFlowObject {
-  authorizationUrl?: string;
-  tokenUrl?: string;
-  refreshUrl?: string;
-  scopes?: Record<string, string>;
-}
-
+/**
+ * Converts a single OpenAPI Security Scheme Object to an AsyncAPI Security Scheme Object.
+ * @param {Record<string, any>} scheme - The OpenAPI Security Scheme Object to convert.
+ * @returns {Record<string, any>} The converted AsyncAPI Security Scheme Object.
+ */
 function convertSecuritySchemes(securitySchemes: Record<string, any>): Record<string, any> {
   const convertedSchemes: Record<string, any> = {};
 
@@ -450,7 +508,12 @@ function convertSecuritySchemes(securitySchemes: Record<string, any>): Record<st
   return convertedSchemes;
 }
 
-function convertSecurityScheme(scheme: any): any {
+/**
+ * Converts a single OpenAPI Security Scheme Object to an AsyncAPI Security Scheme Object.
+ * @param {any} scheme - The OpenAPI Security Scheme Object to convert.
+ * @returns {Record<string, any>} The converted AsyncAPI Security Scheme Object.
+ */
+function convertSecurityScheme(scheme: any): Record<string, any> {
   const convertedScheme: any = {
     type: scheme.type,
     description: scheme.description
@@ -488,6 +551,11 @@ function convertSecurityScheme(scheme: any): any {
   return convertedScheme;
 }
 
+/**
+ * Converts OpenAPI Response Objects from the components section to AsyncAPI Message Objects.
+ * @param {Record<string, any>} responses - The OpenAPI Response Objects to convert.
+ * @returns {Record<string, any>} A record of converted AsyncAPI Message Objects.
+ */
 function convertComponentResponsesToMessages(responses: Record<string, any>): Record<string, any> {
   const messages: Record<string, any> = {};
 
@@ -513,6 +581,11 @@ function convertComponentResponsesToMessages(responses: Record<string, any>): Re
   return messages;
 }
 
+/**
+ * Converts OpenAPI Request Body Objects from the components section to AsyncAPI Message Trait Objects.
+ * @param {Record<string, any>} requestBodies - The OpenAPI Request Body Objects to convert.
+ * @returns {Record<string, any>} A record of converted AsyncAPI Message Trait Objects.
+ */
 function convertRequestBodiesToMessageTraits(requestBodies: Record<string,any>): Record<string, any> {
   const messageTraits: Record<string, any> = {};
 
@@ -536,6 +609,11 @@ function convertRequestBodiesToMessageTraits(requestBodies: Record<string,any>):
   return messageTraits;
 }
 
+/**
+ * Converts OpenAPI Header Objects from the components section to AsyncAPI Message Trait Objects.
+ * @param {Record<string, any>} headers - The OpenAPI Header Objects to convert.
+ * @returns {Record<string, any>} A record of converted AsyncAPI Message Trait Objects.
+ */
 function convertHeadersToMessageTraits(headers: Record<string, any>): Record<string, any> {
   const messageTraits: Record<string, any> = {};
 
@@ -554,6 +632,11 @@ function convertHeadersToMessageTraits(headers: Record<string, any>): Record<str
   return messageTraits;
 }
 
+/**
+ * Converts OpenAPI Header Objects to an AsyncAPI Schema Object representing the headers.
+ * @param {Record<string, any>} headers - The OpenAPI Header Objects to convert.
+ * @returns {SchemaObject} An AsyncAPI Schema Object representing the headers.
+ */
 function convertHeadersToSchema(headers: Record<string, any>): any {
   const properties: Record<string, any> = {};
 

@@ -38,8 +38,11 @@ operations:
     bindings:
       http:
         method: GET
-    messages:
-      - $ref: '#/channels/secure/messages/getsecureResponse200'
+    reply:
+      channel:
+        $ref: '#/channels/secure'
+      messages:
+        - $ref: '#/channels/secure/messages/getsecureResponse200'
   getoauth:
     action: receive
     channel:
@@ -48,27 +51,36 @@ operations:
     bindings:
       http:
         method: GET
-    messages:
-      - $ref: '#/channels/oauth/messages/getoauthResponse200'
+    reply:
+      channel:
+        $ref: '#/channels/oauth'
+      messages:
+        - $ref: '#/channels/oauth/messages/getoauthResponse200'
 components:
   schemas:
     SecureResponse:
-      type: object
-      properties:
-        message:
-          type: string
+      schemaFormat: application/vnd.oai.openapi;version=3.0.0
+      schema:
+        type: object
+        properties:
+          message:
+            type: string
     OAuthResponse:
-      type: object
-      properties:
-        data:
-          type: string
+      schemaFormat: application/vnd.oai.openapi;version=3.0.0
+      schema:
+        type: object
+        properties:
+          data:
+            type: string
     Error:
-      type: object
-      properties:
-        code:
-          type: integer
-        message:
-          type: string
+      schemaFormat: application/vnd.oai.openapi;version=3.0.0
+      schema:
+        type: object
+        properties:
+          code:
+            type: integer
+          message:
+            type: string
   securitySchemes:
     bearerAuth:
       type: http
