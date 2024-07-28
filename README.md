@@ -1,6 +1,6 @@
 # AsyncAPI Converter
 
-Convert [AsyncAPI](https://asyncapi.com) documents older to newer versions.
+Convert [AsyncAPI](https://asyncapi.com) documents older to newer versions and you can also convert OpenAPI documents to AsyncAPI documents.
 
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
 [![All Contributors](https://img.shields.io/badge/all_contributors-8-orange.svg?style=flat-square)](#contributors-)
@@ -17,6 +17,7 @@ Convert [AsyncAPI](https://asyncapi.com) documents older to newer versions.
   * [In TS](#in-ts)
 - [Conversion 2.x.x to 3.x.x](#conversion-2xx-to-3xx)
 - [Known missing features](#known-missing-features)
+- [OpenAPI 3.0 to AsyncAPI 3.0 Conversion](#openapi-30-to-asyncapi-30-conversion)
 - [Development](#development)
 - [Contribution](#contribution)
 - [Contributors ✨](#contributors-%E2%9C%A8)
@@ -193,6 +194,45 @@ Conversion to version `3.x.x` from `2.x.x` has several assumptions that should b
         default: "test"
         examples: ["test"]
   ```
+
+### OpenAPI 3.0 to AsyncAPI 3.0 Conversion
+
+The converter now supports transformation from OpenAPI 3.0 to AsyncAPI 3.0. This feature enables easy transition of existing OpenAPI 3.0 documents to AsyncAPI 3.0.
+
+To use this new conversion feature:
+
+```js
+const fs = require('fs');
+const { convert } = require('@asyncapi/converter')
+
+try {
+  const openapi = fs.readFileSync('openapi.yml', 'utf-8')
+  const asyncapi = convert(openapi, '3.0.0', { from: 'openapi' });
+  console.log(asyncapi);
+} catch (e) {
+  console.error(e);
+}
+```
+
+When converting from OpenAPI to AsyncAPI you can now specify the perspective of the conversion using the `perspective` option. This allows you to choose whether the conversion should be from an application or client point of view
+
+```js
+const { convert } = require('@asyncapi/converter')
+
+try {
+  const asyncapi2 = fs.readFileSync('asyncapi2.yml', 'utf-8')
+  const asyncapi3 = convert(asyncapi2, '3.0.0', { openAPIToAsyncAPI: { perspective: 'client' } });
+  console.log(asyncapi3);
+} catch (e) {
+  console.error(e);
+}
+```
+
+The perspective option can be set to either 'server' (default) or 'client'. 
+
+- With `server` perspective: `action` becomes `receive`
+
+- With `client` perspective: `action` becomes `send`
 
 ## Development
 
