@@ -60,6 +60,7 @@ channels:
           properties:
             file:
               type: string
+              format: binary
       uploadFileResponse200:
         name: uploadFileResponse200
         title: POST response 200
@@ -79,6 +80,7 @@ channels:
         contentType: application/octet-stream
         payload:
           type: string
+          format: binary
         summary: Successful response
 operations:
   subscribeWebhook:

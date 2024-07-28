@@ -68,7 +68,7 @@ export function convertOpenAPI(input: string | OpenAPIDocument, version: OpenAPI
   const openapiToAsyncapiConverter = openapiConverters[converterVersion as OpenAPIConvertVersion] as ConvertOpenAPIFunction;
 
   if (!openapiToAsyncapiConverter) {
-    throw new Error("OpenAPI to AsyncAPI converter is not available.");
+    throw new Error(`We are not able to convert OpenAPI ${converterVersion} to AsyncAPI, please raise a feature request.`);
   }
 
   const convertedAsyncAPI = openapiToAsyncapiConverter(document as OpenAPIDocument, options);

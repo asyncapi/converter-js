@@ -191,19 +191,7 @@ function convertPaths(paths: OpenAPIDocument['paths'], perspective: 'client' | '
         if (['get', 'post', 'put', 'delete', 'patch', 'options', 'head', 'trace'].includes(method) && isPlainObject(operation)) {
           const operationObject = operation as any;
           const operationId = operationObject.operationId || `${method}${channelName}`;
-  
-          // Convert request body to message
-          if (operationObject.requestBody) {
-            const requestMessages = convertRequestBodyToMessages(operationObject.requestBody, operationId, method);
-            Object.assign(channels[channelName].messages, requestMessages);
-          }
-  
-          // Convert responses to messages
-          if (operationObject.responses) {
-            const responseMessages = convertResponsesToMessages(operationObject.responses, operationId, method);
-            Object.assign(channels[channelName].messages, responseMessages);
-          }
-  
+
           // Create operation
           operations[operationId] = {
             action: perspective === 'client' ? 'send' : 'receive',
@@ -216,10 +204,29 @@ function convertPaths(paths: OpenAPIDocument['paths'], perspective: 'client' | '
                 method: method.toUpperCase(),
               }
             },
-            messages: operationObject.requestBody 
-            ? [createRefObject('channels', channelName, 'messages', `${operationId}Request`)]
-            : [],
+            messages: []
           };
+  
+          // Convert request body to message
+          if (operationObject.requestBody) {
+            const requestMessages = convertRequestBodyToMessages(operationObject.requestBody, operationId, method);
+            Object.assign(channels[channelName].messages, requestMessages);
+            operations[operationId].messages.push(...Object.keys(requestMessages).map(msgName => 
+              createRefObject('channels', channelName, 'messages', msgName)
+            ));
+          }
+  
+          // Convert responses to messages
+          if (operationObject.responses) {
+            const responseMessages = convertResponsesToMessages(operationObject.responses, operationId, method);
+            Object.assign(channels[channelName].messages, responseMessages);
+            operations[operationId].reply = {
+              channel: createRefObject('channels', channelName),
+              messages: Object.keys(responseMessages).map(msgName => 
+                createRefObject('channels', channelName, 'messages', msgName)
+              )
+            };
+          }
 
           // Add reply section if there are responses
         if (operationObject.responses && Object.keys(operationObject.responses).length > 0) {
@@ -340,7 +347,7 @@ function convertRequestBodyToMessages(requestBody: any, operationId: string, met
         name: messageName,
         title: `${method.toUpperCase()} request`,
         contentType: contentType,
-        payload: convertSchema(mediaType.schema),
+        payload: mediaType.schema,
         summary: requestBody.description,
       };
     });
@@ -367,7 +374,7 @@ function convertResponsesToMessages(responses: Record<string, any>, operationId:
           name: messageName,
           title: `${method.toUpperCase()} response ${statusCode}`,
           contentType: contentType,
-          payload: convertSchema(mediaType.schema),
+          payload: mediaType.schema,
           summary: response.description,
           headers: response.headers ? convertHeadersToSchema(response.headers) : undefined,
         };
@@ -455,45 +462,6 @@ function convertSchemas(schemas: Record<string, any>): Record<string, any> {
 }
 
 /**
- * Converts a single OpenAPI Schema Object to an AsyncAPI Schema Object.
- * @param {any} schema - The OpenAPI Schema Object to convert.
- * @returns {any} The converted AsyncAPI Schema Object.
- */
-function convertSchema(schema: any): any {
-  if (isRefObject(schema)) {
-    return schema;
-  }
-
-  const convertedSchema: any = { ...schema };
-
-  if (schema.properties) {
-    convertedSchema.properties = {};
-    for (const [propName, propSchema] of Object.entries(schema.properties)) {
-      convertedSchema.properties[propName] = convertSchema(propSchema);
-    }
-  }
-
-  if (schema.items) {
-    convertedSchema.items = convertSchema(schema.items);
-  }
-
-  ['allOf', 'anyOf', 'oneOf'].forEach(key => {
-    if (schema[key]) {
-      convertedSchema[key] = schema[key].map(convertSchema);
-    }
-  });
-
-  // Handle formats
-  if (schema.format === 'date-time') {
-    convertedSchema.format = 'date-time';
-  } else if (schema.format === 'byte' || schema.format === 'binary') {
-    delete convertedSchema.format;
-  }
-
-  return convertedSchema;
-}
-
-/**
  * Converts a single OpenAPI Security Scheme Object to an AsyncAPI Security Scheme Object.
  * @param {Record<string, any>} scheme - The OpenAPI Security Scheme Object to convert.
  * @returns {Record<string, any>} The converted AsyncAPI Security Scheme Object.
@@ -565,7 +533,7 @@ function convertComponentResponsesToMessages(responses: Record<string, any>): Re
         messages[name] = {
           name: name,
           contentType: contentType,
-          payload: convertSchema(mediaType.schema),
+          payload: mediaType.schema,
           summary: response.description,
           headers: response.headers ? convertHeadersToSchema(response.headers) : undefined,
         };
@@ -622,7 +590,7 @@ function convertHeadersToMessageTraits(headers: Record<string, any>): Record<str
       headers: {
         type: 'object',
         properties: {
-          [name]: convertSchema(header.schema),
+          [name]: header.schema,
         },
         required: [name],
       },
@@ -640,8 +608,10 @@ function convertHeadersToMessageTraits(headers: Record<string, any>): Record<str
 function convertHeadersToSchema(headers: Record<string, any>): any {
   const properties: Record<string, any> = {};
 
-  for (const [name, header] of Object.entries(headers)) {
-    properties[name] = convertSchema(header.schema);
+  for (const [name, headerOrRef] of Object.entries(headers)) {
+    if (!isRefObject(headerOrRef)) {
+      properties[name] = headerOrRef.schema || {};
+    }
   }
 
   return {
