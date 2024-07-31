@@ -36,6 +36,9 @@ channels:
         payload:
           $ref: '#/components/schemas/User'
         summary: Successful response
+    parameters:
+      userId:
+        description: Path parameter userId
   'users_{userId}_posts':
     address: '/users/{userId}/posts'
     messages:
@@ -48,6 +51,9 @@ channels:
           items:
             $ref: '#/components/schemas/Post'
         summary: Successful response
+    parameters:
+      userId:
+        description: Path parameter userId
   upload:
     address: /upload
     messages:

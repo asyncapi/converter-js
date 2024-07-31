@@ -30,7 +30,7 @@ describe("convert() - openapi to asyncapi", () => {
     const result = convertOpenAPI(input, '3.0.0');
     assertResults(output, result);
   });
-  it("should convert with 'server' perspective", () => {
+  it("should convert with 'client' perspective", () => {
     const input = fs.readFileSync(path.resolve(__dirname, "input", "openapi", "operation_and_parameter.yml"), "utf8");
     const output = fs.readFileSync(path.resolve(__dirname, "output", "openapi-to-asyncapi", "operation_and_parameter_client.yml"), "utf8");
     const options: OpenAPIToAsyncAPIOptions = { perspective: 'client' };

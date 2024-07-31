@@ -1,4 +1,4 @@
-import { sortObjectKeys, isRefObject, isPlainObject, removeEmptyObjects, createRefObject } from "./utils";
+import { sortObjectKeys, isRefObject, isPlainObject, removeEmptyObjects, createRefObject, isRemoteRef } from "./utils";
 import { AsyncAPIDocument, ConvertOpenAPIFunction, OpenAPIToAsyncAPIOptions, OpenAPIDocument } from "./interfaces";
 
 export const converters: Record<string, ConvertOpenAPIFunction > = {
@@ -134,6 +134,11 @@ function convertServerObjects(servers: ServerVariableObject[], openapi: OpenAPID
     return newServers;
 }
 
+/**
+ * Generates a server name based on the server URL.
+ * @param {string} url - The server URL.
+ * @returns {string} The generated server name.
+ */
 function generateServerName(url: string): string {
   const { host, pathname } = resolveServerUrl(url);
   const baseName = host.split('.').slice(-2).join('.');
@@ -184,7 +189,7 @@ function convertPaths(paths: OpenAPIDocument['paths'], perspective: 'client' | '
       channels[channelName] = {
         address: path,
         messages: {},
-        parameters: convertPathParameters(pathItem.parameters)
+        parameters: convertPathParameters(path, pathItem.parameters)
       };
   
       for (const [method, operation] of Object.entries(pathItem)) {
@@ -263,12 +268,20 @@ function convertPaths(paths: OpenAPIDocument['paths'], perspective: 'client' | '
  * @param {any[]} parameters - The OpenAPI path parameters.
  * @returns {Record<string, any>} The converted AsyncAPI channel parameters.
  */
-function convertPathParameters(parameters: any[] = []): Record<string, any> {
+function convertPathParameters( path:string, parameters: any[] = []): Record<string, any> {
   const convertedParams: Record<string, any> = {};
+
+  const paramNames = path.match(/\{([^}]+)\}/g)?.map(param => param.slice(1, -1)) || [];
   
-  parameters.forEach(param => {
-    if (!isRefObject(param) && param.in === 'path') {
-      convertedParams[param.name] = convertParameter(param);
+  paramNames.forEach(paramName => {
+    const param = parameters.find(p => p.name === paramName && p.in === 'path');
+    if (param) {
+      convertedParams[paramName] = convertParameter(param);
+    } else {
+      // If the parameter is not defined in the OpenAPI spec, create a default one
+      convertedParams[paramName] = {
+        description: `Path parameter ${paramName}`,
+      };
     }
   });
 
@@ -299,17 +312,19 @@ function convertOperationParameters(parameters: any[]): Record<string, any> {
  */
 function convertParameter(param: any): any {
   const convertedParam: any = {
-    description: param.description
+    description: param.description,
   };
 
-  if (param.schema) {
-    if (!isRefObject(param.schema)) {
-      if (param.schema.enum) {
-        convertedParam.enum = param.schema.enum;
-      }
-      if (param.schema.default !== undefined) {
-        convertedParam.default = param.schema.default;
-      }
+  if (param.required) {
+    convertedParam.required = param.required;
+  }
+
+  if (param.schema && !isRefObject(param.schema)) {
+    if (param.schema.enum) {
+      convertedParam.enum = param.schema.enum;
+    }
+    if (param.schema.default !== undefined) {
+      convertedParam.default = param.schema.default;
     }
   }
 
@@ -444,6 +459,26 @@ function convertComponents(openapi: OpenAPIDocument): AsyncAPIDocument['componen
 }
 
 /**
+ * converts openAPI schema object to multiformat/schema object
+ * @param schema openAPI schema object
+ * @returns multiformat/schema object
+ */
+function convertSchema(schema: any): any {
+  if (isRefObject(schema)) {
+    // Check if it's an external reference
+    if (schema.$ref.startsWith('./') || schema.$ref.startsWith('http')) {
+      return schema; 
+    }
+    return schema;
+  }
+
+  return {
+    schemaFormat: 'application/vnd.oai.openapi;version=3.0.0',
+    schema: schema
+  };
+}
+
+/**
  * Converts OpenAPI Schema Objects to AsyncAPI Schema Objects.
  * @param {Record<string, any>} schemas - The OpenAPI Schema Objects to convert.
  * @returns {Record<string, any>} The converted AsyncAPI Schema Objects.
@@ -452,10 +487,7 @@ function convertSchemas(schemas: Record<string, any>): Record<string, any> {
   const convertedSchemas: Record<string, any> = {};
 
   for (const [name, schema] of Object.entries(schemas)) {
-    convertedSchemas[name] = {
-      schemaFormat: 'application/vnd.oai.openapi;version=3.0.0',
-      schema: schema
-    };
+    convertedSchemas[name] = convertSchema(schema);
   }
 
   return convertedSchemas;

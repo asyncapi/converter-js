@@ -234,6 +234,10 @@ The perspective option can be set to either 'server' (default) or 'client'.
 
 - With `client` perspective: `action` becomes `send`
 
+#### Limitations
+
+- External to internal references: The converter does not support scenarios where an external schema file references internal components of the AsyncAPI document. In such cases, manual adjustment of the converted document may be necessary.
+
 ## Development
 
 1. Setup project by installing dependencies `npm install`

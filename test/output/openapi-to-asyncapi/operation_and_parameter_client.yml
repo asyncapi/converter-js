@@ -68,6 +68,9 @@ channels:
         name: deleteItemResponse204
         title: DELETE response 204
         summary: Successful response
+    parameters:
+      itemId:
+        description: Path parameter itemId
 operations:
   listItems:
     action: send
