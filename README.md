@@ -236,7 +236,7 @@ The perspective option can be set to either 'server' (default) or 'client'.
 
 #### Limitations
 
-- External to internal references: The converter does not support scenarios where an external schema file references internal components of the AsyncAPI document. In such cases, manual adjustment of the converted document may be necessary.
+- External to internal references: The converter does not support scenarios where an external schema file references internal components of the OpenAPI document. In such cases, manual adjustment of the converted document may be necessary.
 
 ## Development
 

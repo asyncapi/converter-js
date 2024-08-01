@@ -63,7 +63,7 @@ export function convertOpenAPI(input: string | OpenAPIDocument, version: OpenAPI
 
   const { format, document } = serializeInput(input);
   const openApiVersion = document.openapi;
-  const converterVersion = openApiVersion === '3.0.0' ? '3.0.0' : openApiVersion;
+  const converterVersion = openApiVersion;
 
   const openapiToAsyncapiConverter = openapiConverters[converterVersion as OpenAPIConvertVersion] as ConvertOpenAPIFunction;
 

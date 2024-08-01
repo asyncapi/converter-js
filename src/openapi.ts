@@ -362,7 +362,7 @@ function convertRequestBodyToMessages(requestBody: any, operationId: string, met
         name: messageName,
         title: `${method.toUpperCase()} request`,
         contentType: contentType,
-        payload: mediaType.schema,
+        payload: convertSchema(mediaType.schema),
         summary: requestBody.description,
       };
     });
@@ -389,7 +389,7 @@ function convertResponsesToMessages(responses: Record<string, any>, operationId:
           name: messageName,
           title: `${method.toUpperCase()} response ${statusCode}`,
           contentType: contentType,
-          payload: mediaType.schema,
+          payload: convertSchema(mediaType.schema),
           summary: response.description,
           headers: response.headers ? convertHeadersToSchema(response.headers) : undefined,
         };
@@ -467,7 +467,11 @@ function convertSchema(schema: any): any {
   if (isRefObject(schema)) {
     // Check if it's an external reference
     if (schema.$ref.startsWith('./') || schema.$ref.startsWith('http')) {
-      return schema; 
+      // Convert external references to multi-format schema objects
+      return {
+        schemaFormat: 'application/vnd.oai.openapi;version=3.0.0',
+        schema: schema
+      };
     }
     return schema;
   }
@@ -565,7 +569,7 @@ function convertComponentResponsesToMessages(responses: Record<string, any>): Re
         messages[name] = {
           name: name,
           contentType: contentType,
-          payload: mediaType.schema,
+          payload: convertSchema(mediaType.schema),
           summary: response.description,
           headers: response.headers ? convertHeadersToSchema(response.headers) : undefined,
         };

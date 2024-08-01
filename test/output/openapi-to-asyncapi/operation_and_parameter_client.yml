@@ -17,9 +17,11 @@ channels:
         title: GET response 200
         contentType: application/json
         payload:
-          type: array
-          items:
-            $ref: '#/components/schemas/Item'
+          schemaFormat: application/vnd.oai.openapi;version=3.0.0
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/Item'
         summary: Successful response
       createItemRequest:
         name: createItemRequest

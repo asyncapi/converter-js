@@ -10,8 +10,7 @@ export function removeLineBreaks(str: string) {
 export function assertResults(output: string, result: string){
   try{
     expect(removeLineBreaks(output)).toEqual(removeLineBreaks(result));
-  }catch(e) {
-    console.log(result)
+  } catch(e) {
     throw e;
   }
 }
