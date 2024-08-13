@@ -1,0 +1,97 @@
+openapi: 3.0.0
+info:
+  title: Components and Security API
+  version: 1.0.0
+  description: An API showcasing various components and security schemes
+servers:
+  - url: https://api.example.com/v1
+paths:
+  /secure:
+    get:
+      summary: Secure endpoint
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecureResponse'
+  /oauth:
+    get:
+      summary: OAuth protected endpoint
+      security:
+        - oAuth2:
+            - read
+            - write
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthResponse'
+components:
+  schemas:
+    SecureResponse:
+      type: object
+      properties:
+        message:
+          type: string
+    OAuthResponse:
+      type: object
+      properties:
+        data:
+          type: string
+    Error:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+    oAuth2:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://example.com/oauth/authorize
+          tokenUrl: https://example.com/oauth/token
+          scopes:
+            read: Read access
+            write: Write access
+  parameters:
+    limitParam:
+      in: query
+      name: limit
+      schema:
+        type: integer
+      required: false
+      description: Maximum number of items to return
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  requestBodies:
+    ItemInput:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+              description:
+                type: string
+  headers:
+    X-Rate-Limit:
+      schema:
+        type: integer
+      description: Calls per hour allowed by the user

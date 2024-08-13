@@ -1,0 +1,192 @@
+asyncapi: 3.0.0
+info:
+  title: 'Callbacks, Links, and Content Types API'
+  version: 1.0.0
+  description: 'An API showcasing callbacks, links, and various content types'
+servers:
+  example_com_v1:
+    host: api.example.com
+    pathname: /v1
+    protocol: https
+channels:
+  webhooks:
+    address: /webhooks
+    messages:
+      subscribeWebhookRequest:
+        name: subscribeWebhookRequest
+        title: POST request
+        contentType: application/json
+        payload:
+          schemaFormat: application/vnd.oai.openapi;version=3.0.0
+          schema:
+            type: object
+            properties:
+              callbackUrl:
+                type: string
+                format: uri
+      subscribeWebhookResponse201:
+        name: subscribeWebhookResponse201
+        title: POST response 201
+        summary: Subscription created
+  'users_{userId}':
+    address: '/users/{userId}'
+    messages:
+      getUserResponse200:
+        name: getUserResponse200
+        title: GET response 200
+        contentType: application/json
+        payload:
+          $ref: '#/components/schemas/User'
+        summary: Successful response
+    parameters:
+      userId:
+        description: Path parameter userId
+  'users_{userId}_posts':
+    address: '/users/{userId}/posts'
+    messages:
+      getUserPostsResponse200:
+        name: getUserPostsResponse200
+        title: GET response 200
+        contentType: application/json
+        payload:
+          schemaFormat: application/vnd.oai.openapi;version=3.0.0
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/Post'
+        summary: Successful response
+    parameters:
+      userId:
+        description: Path parameter userId
+  upload:
+    address: /upload
+    messages:
+      uploadFileRequest:
+        name: uploadFileRequest
+        title: POST request
+        contentType: multipart/form-data
+        payload:
+          schemaFormat: application/vnd.oai.openapi;version=3.0.0
+          schema:
+            type: object
+            properties:
+              file:
+                type: string
+                format: binary
+      uploadFileResponse200:
+        name: uploadFileResponse200
+        title: POST response 200
+        contentType: application/json
+        payload:
+          schemaFormat: application/vnd.oai.openapi;version=3.0.0
+          schema:
+            type: object
+            properties:
+              fileId:
+                type: string
+        summary: Successful upload
+  stream:
+    address: /stream
+    messages:
+      getStreamResponse200:
+        name: getStreamResponse200
+        title: GET response 200
+        contentType: application/octet-stream
+        payload:
+          schemaFormat: application/vnd.oai.openapi;version=3.0.0
+          schema:
+            type: string
+            format: binary
+        summary: Successful response
+operations:
+  subscribeWebhook:
+    action: receive
+    channel:
+      $ref: '#/channels/webhooks'
+    summary: Subscribe to webhook
+    bindings:
+      http:
+        method: POST
+    messages:
+      - $ref: '#/channels/webhooks/messages/subscribeWebhookRequest'
+    reply:
+      channel:
+        $ref: '#/channels/webhooks'
+      messages:
+        - $ref: '#/channels/webhooks/messages/subscribeWebhookResponse201'
+  getUser:
+    action: receive
+    channel:
+      $ref: '#/channels/users_{userId}'
+    summary: Get a user
+    bindings:
+      http:
+        method: GET
+    reply:
+      channel:
+        $ref: '#/channels/users_{userId}'
+      messages:
+        - $ref: '#/channels/users_{userId}/messages/getUserResponse200'
+  getUserPosts:
+    action: receive
+    channel:
+      $ref: '#/channels/users_{userId}_posts'
+    summary: Get user posts
+    bindings:
+      http:
+        method: GET
+    reply:
+      channel:
+        $ref: '#/channels/users_{userId}_posts'
+      messages:
+        - $ref: '#/channels/users_{userId}_posts/messages/getUserPostsResponse200'
+  uploadFile:
+    action: receive
+    channel:
+      $ref: '#/channels/upload'
+    summary: Upload a file
+    bindings:
+      http:
+        method: POST
+    messages:
+      - $ref: '#/channels/upload/messages/uploadFileRequest'
+    reply:
+      channel:
+        $ref: '#/channels/upload'
+      messages:
+        - $ref: '#/channels/upload/messages/uploadFileResponse200'
+  getStream:
+    action: receive
+    channel:
+      $ref: '#/channels/stream'
+    summary: Get a data stream
+    bindings:
+      http:
+        method: GET
+    reply:
+      channel:
+        $ref: '#/channels/stream'
+      messages:
+        - $ref: '#/channels/stream/messages/getStreamResponse200'
+components:
+  schemas:
+    User:
+      schemaFormat: application/vnd.oai.openapi;version=3.0.0
+      schema:
+        type: object
+        properties:
+          id:
+            type: string
+          name:
+            type: string
+    Post:
+      schemaFormat: application/vnd.oai.openapi;version=3.0.0
+      schema:
+        type: object
+        properties:
+          id:
+            type: string
+          title:
+            type: string
+          content:
+            type: string

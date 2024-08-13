@@ -1,0 +1,30 @@
+asyncapi: 3.0.0
+info:
+  title: Test API
+  version: 1.0.0
+channels:
+  test:
+    address: /test
+    messages:
+      gettestResponse200:
+        name: gettestResponse200
+        title: GET response 200
+        contentType: application/json
+        payload:
+          schemaFormat: application/vnd.oai.openapi;version=3.0.0
+          schema:
+            $ref: ./external.json
+        summary: Successful response
+operations:
+  gettest:
+    action: receive
+    channel:
+      $ref: '#/channels/test'
+    bindings:
+      http:
+        method: GET
+    reply:
+      channel:
+        $ref: '#/channels/test'
+      messages:
+        - $ref: '#/channels/test/messages/gettestResponse200'

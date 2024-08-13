@@ -1,0 +1,125 @@
+openapi: 3.0.0
+info:
+  title: Operations and Parameters API
+  version: 1.0.0
+  description: An API showcasing various operations and parameter types
+servers:
+  - url: https://api.example.com/v1
+paths:
+  /items:
+    get:
+      summary: List items
+      operationId: listItems
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+          required: false
+          description: Maximum number of items to return
+        - in: query
+          name: offset
+          schema:
+            type: integer
+          required: false
+          description: Number of items to skip
+        - in: header
+          name: X-API-Key
+          schema:
+            type: string
+          required: true
+          description: API Key for authentication
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Item'
+    post:
+      summary: Create an item
+      operationId: createItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ItemInput'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+  /items/{itemId}:
+    get:
+      summary: Get an item
+      operationId: getItem
+      parameters:
+        - in: path
+          name: itemId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+    put:
+      summary: Update an item
+      operationId: updateItem
+      parameters:
+        - in: path
+          name: itemId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ItemInput'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+    delete:
+      summary: Delete an item
+      operationId: deleteItem
+      parameters:
+        - in: path
+          name: itemId
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Successful response
+components:
+  schemas:
+    Item:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+    ItemInput:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
