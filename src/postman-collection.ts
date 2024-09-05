@@ -7,10 +7,7 @@ export const converters: Record<string, ConvertPostmanFunction > = {
     '3.0.0': from_postman_to_asyncapi
 }
 
-// Returns a JavaScript object representation of the OpenAPI definition.
 const openapi = transpile(collection);
-
-// console.log(JSON.stringify(openapi, null, 2));
 
 function from_postman_to_asyncapi(postman: any) {
     const openapi = transpile(postman);
@@ -19,5 +16,4 @@ function from_postman_to_asyncapi(postman: any) {
 }
 
 const output = from_postman_to_asyncapi(collection);
-// console.log(JSON.stringify(output, null, 2));
 
