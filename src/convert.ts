@@ -4,10 +4,11 @@ import { converters as firstConverters } from "./first-version";
 import { converters as secondConverters } from "./second-version";
 import { converters as thirdConverters } from "./third-version";
 import { converters as openapiConverters } from "./openapi";
+import { converters as postmanConverters } from "./postman-collection";
 
 import { serializeInput } from "./utils";
 
-import type { AsyncAPIDocument, AsyncAPIConvertVersion, OpenAPIConvertVersion, ConvertOptions, ConvertFunction, ConvertOpenAPIFunction, OpenAPIDocument, OpenAPIToAsyncAPIOptions } from './interfaces';
+import type { AsyncAPIDocument, AsyncAPIConvertVersion, OpenAPIConvertVersion, ConvertOptions, ConvertFunction, ConvertOpenAPIFunction, OpenAPIDocument, OpenAPIToAsyncAPIOptions, ConvertPostmanFunction } from './interfaces';
 
 /**
  * Value for key (version) represents the function which converts specification from previous version to the given as key.
@@ -78,3 +79,17 @@ export function convertOpenAPI(input: string | OpenAPIDocument, version: OpenAPI
   }
   return convertedAsyncAPI;
 }
+
+export function convertPostman(input: string, version: OpenAPIConvertVersion): string;
+export function convertPostman(input: any, version: OpenAPIConvertVersion): AsyncAPIDocument;
+export function convertPostman(input: string | any, version: OpenAPIConvertVersion): string | any {
+  const { format, document } = serializeInput(input);
+  const postmantoAsyncapiConverter = postmanConverters[version] as ConvertPostmanFunction;
+
+  const convertedAsyncAPI = postmantoAsyncapiConverter(document as any);
+
+  if (format === "yaml") {
+    return dump(convertedAsyncAPI, { skipInvalid: true });
+  }
+  return convertedAsyncAPI;
+} 

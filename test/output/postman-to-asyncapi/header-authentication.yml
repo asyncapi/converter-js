@@ -1,0 +1,32 @@
+asyncapi: 3.0.0
+info:
+  title: Headers and Authentication Test Collection
+  version: 1.0.0
+servers:
+  example_com:
+    host: example.com
+    protocol: https
+channels:
+  api_authenticated:
+    address: /api/authenticated
+    messages:
+      getRequestWithHeadersAndAuthenticationResponse200:
+        name: getRequestWithHeadersAndAuthenticationResponse200
+        title: GET response 200
+        summary: ''
+operations:
+  getRequestWithHeadersAndAuthentication:
+    action: receive
+    channel:
+      $ref: '#/channels/api_authenticated'
+    summary: GET Request with Headers and Authentication
+    description: GET Request with Headers and Authentication
+    bindings:
+      http:
+        method: GET
+    reply:
+      channel:
+        $ref: '#/channels/api_authenticated'
+      messages:
+        - $ref: >-
+            #/channels/api_authenticated/messages/getRequestWithHeadersAndAuthenticationResponse200
