@@ -204,11 +204,11 @@ To use this new conversion feature:
 
 ```js
 const fs = require('fs');
-const { convert } = require('@asyncapi/converter')
+const { convertOpenAPI } = require('@asyncapi/converter')
 
 try {
   const openapi = fs.readFileSync('openapi.yml', 'utf-8')
-  const asyncapi = convert(openapi, '3.0.0', { from: 'openapi' });
+  const asyncapi = convertOpenAPI(openapi, '3.0.0', { from: 'openapi' });
   console.log(asyncapi);
 } catch (e) {
   console.error(e);
@@ -218,11 +218,11 @@ try {
 When converting from OpenAPI to AsyncAPI you can now specify the perspective of the conversion using the `perspective` option. This allows you to choose whether the conversion should be from an application or client point of view
 
 ```js
-const { convert } = require('@asyncapi/converter')
+const { convertOpenAPI } = require('@asyncapi/converter')
 
 try {
   const asyncapi2 = fs.readFileSync('asyncapi2.yml', 'utf-8')
-  const asyncapi3 = convert(asyncapi2, '3.0.0', { openAPIToAsyncAPI: { perspective: 'client' } });
+  const asyncapi3 = convertOpenAPI(asyncapi2, '3.0.0', { openAPIToAsyncAPI: { perspective: 'client' } });
   console.log(asyncapi3);
 } catch (e) {
   console.error(e);
