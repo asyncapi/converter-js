@@ -196,7 +196,7 @@ Conversion to version `3.x.x` from `2.x.x` has several assumptions that should b
         examples: ["test"]
   ```
 
-### OpenAPI 3.0 to AsyncAPI 3.0 Conversion
+## OpenAPI 3.0 to AsyncAPI 3.0 Conversion
 
 The converter now supports transformation from OpenAPI 3.0 to AsyncAPI 3.0. This feature enables easy transition of existing OpenAPI 3.0 documents to AsyncAPI 3.0.
 
