@@ -1,4 +1,3 @@
-import collection from '../../collection.json';
 import { transpile } from 'postman2openapi';
 import { from_openapi_to_asyncapi } from './openapi';
 import { ConvertPostmanFunction, PostmanToAsyncAPIOptions } from 'interfaces';
