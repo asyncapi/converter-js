@@ -2,7 +2,7 @@ import { load } from 'js-yaml';
 
 import type { AsyncAPIDocument, OpenAPIDocument } from "./interfaces";
 
-export function serializeInput(document: string | AsyncAPIDocument | OpenAPIDocument): { format: 'json' | 'yaml', document: AsyncAPIDocument | OpenAPIDocument } | never {
+export function serializeInput(document: string | AsyncAPIDocument | OpenAPIDocument | Record<string,any>): { format: 'json' | 'yaml', document: AsyncAPIDocument | OpenAPIDocument } | never {
   let triedConvertToYaml = false;
   try {
     if (typeof document === 'object') {

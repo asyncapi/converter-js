@@ -81,10 +81,10 @@ export function convertOpenAPI(input: string | OpenAPIDocument, version: OpenAPI
 }
 
 export function convertPostman(input: string, version: OpenAPIConvertVersion, options?: PostmanToAsyncAPIOptions ): string;
-export function convertPostman(input: any, version: OpenAPIConvertVersion, options?: PostmanToAsyncAPIOptions): AsyncAPIDocument;
-export function convertPostman(input: string | any, version: OpenAPIConvertVersion, options: PostmanToAsyncAPIOptions={}): string | any {
+export function convertPostman(input: Record<string,any>, version: OpenAPIConvertVersion, options?: PostmanToAsyncAPIOptions): AsyncAPIDocument;
+export function convertPostman(input: string | Record<string,any>, version: OpenAPIConvertVersion, options: PostmanToAsyncAPIOptions={}): string | AsyncAPIDocument {
   const { format, document } = serializeInput(input);
-  const postmantoAsyncapiConverter = postmanConverters[version] as ConvertPostmanFunction;
+  const postmantoAsyncapiConverter = postmanConverters[version];
 
   const convertedAsyncAPI = postmantoAsyncapiConverter(document as any, options);
 
