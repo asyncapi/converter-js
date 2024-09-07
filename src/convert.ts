@@ -8,7 +8,7 @@ import { converters as postmanConverters } from "./postman-collection";
 
 import { serializeInput } from "./utils";
 
-import type { AsyncAPIDocument, AsyncAPIConvertVersion, OpenAPIConvertVersion, ConvertOptions, ConvertFunction, ConvertOpenAPIFunction, OpenAPIDocument, OpenAPIToAsyncAPIOptions, ConvertPostmanFunction, PostmanToAsyncAPIOptions } from './interfaces';
+import type { AsyncAPIDocument, AsyncAPIConvertVersion, OpenAPIConvertVersion, ConvertOptions, ConvertFunction, ConvertOpenAPIFunction, OpenAPIDocument, OpenAPIToAsyncAPIOptions, PostmanToAsyncAPIOptions } from './interfaces';
 
 /**
  * Value for key (version) represents the function which converts specification from previous version to the given as key.
