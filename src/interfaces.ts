@@ -20,6 +20,11 @@ export type OpenAPIToAsyncAPIOptions = {
 export type ConvertOptions = {
   v2tov3?: ConvertV2ToV3Options;
   openAPIToAsyncAPI?: OpenAPIToAsyncAPIOptions;
+  postmanToAsyncAPI?: PostmanToAsyncAPIOptions;
+}
+
+export type PostmanToAsyncAPIOptions = {
+  perspective?: 'client' | 'server';
 }
 
 /**
@@ -27,4 +32,4 @@ export type ConvertOptions = {
  */
 export type ConvertFunction = (asyncapi: AsyncAPIDocument, options: ConvertOptions) => AsyncAPIDocument;
 export type ConvertOpenAPIFunction = (openapi: OpenAPIDocument, options: OpenAPIToAsyncAPIOptions) => AsyncAPIDocument;
-
+export type ConvertPostmanFunction = (postman: any , options: PostmanToAsyncAPIOptions) => AsyncAPIDocument;

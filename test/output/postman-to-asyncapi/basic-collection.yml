@@ -1,0 +1,72 @@
+asyncapi: 3.0.0
+info:
+  title: Sample Postman Collection
+  version: 1.0.0
+servers:
+  typicode_com:
+    host: jsonplaceholder.typicode.com
+    protocol: https
+channels:
+  posts_1:
+    address: /posts/1
+    messages:
+      sampleRequestResponse200:
+        name: sampleRequestResponse200
+        title: GET response 200
+        summary: ''
+  posts:
+    address: /posts
+    messages:
+      samplePostRequestRequest:
+        name: samplePostRequestRequest
+        title: POST request
+        contentType: application/json
+        payload:
+          schemaFormat: application/vnd.oai.openapi;version=3.0.0
+          schema:
+            type: object
+            properties:
+              body:
+                type: string
+                example: bar
+              title:
+                type: string
+                example: foo
+              userId:
+                type: number
+                example: 1
+      samplePostRequestResponse200:
+        name: samplePostRequestResponse200
+        title: POST response 200
+        summary: ''
+operations:
+  sampleRequest:
+    action: receive
+    channel:
+      $ref: '#/channels/posts_1'
+    summary: Sample Request
+    description: Sample Request
+    bindings:
+      http:
+        method: GET
+    reply:
+      channel:
+        $ref: '#/channels/posts_1'
+      messages:
+        - $ref: '#/channels/posts_1/messages/sampleRequestResponse200'
+  samplePostRequest:
+    action: receive
+    channel:
+      $ref: '#/channels/posts'
+    summary: Sample POST Request
+    description: Sample POST Request
+    bindings:
+      http:
+        method: POST
+    messages:
+      - $ref: '#/channels/posts/messages/samplePostRequestRequest'
+    reply:
+      channel:
+        $ref: '#/channels/posts'
+      messages:
+        - $ref: '#/channels/posts/messages/samplePostRequestResponse200'

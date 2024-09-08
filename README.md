@@ -239,6 +239,48 @@ The perspective option can be set to either 'server' (default) or 'client'.
 
 - External to internal references: The converter does not support scenarios where an external schema file references internal components of the OpenAPI document. In such cases, manual adjustment of the converted document may be necessary.
 
+### Postman Collection to AsyncAPI conversion
+
+The converter now also supports conversion from postman collection to AsyncAPI 3.0. This feature enables easy transition of existing postman collection to any AsyncAPI 3.0 documents.
+
+To use this new conversion feature:
+
+```js
+const fs = require('fs');
+const { convertPostman } = require('@asyncapi/converter')
+try {
+  const postman = fs.readFileSync('postman-collection.yml', 'utf-8')
+  const asyncapi = convertPostman(postman, '3.0.0');
+  console.log(asyncapi);
+} catch (e) {
+  console.error(e);
+}
+```
+
+When converting from postman collection to AsyncAPI you can now specify the perspective of the conversion using the `perspective` option. This allows you to choose whether the conversion should be from an application or client point of view
+
+```js
+const { convertPostman } = require('@asyncapi/converter')
+try {
+  const postman = fs.readFileSync('postman-collection.yml', 'utf-8')
+  const asyncapi = convertPostman(postman, '3.0.0', { perspective: 'client' });
+  console.log(asyncapi);
+} catch (e) {
+  console.error(e);
+}
+```
+
+The perspective option can be set to either 'server' (default) or 'client'. 
+
+- With `server` perspective: `action` becomes `receive`
+
+- With `client` perspective: `action` becomes `send`
+
+#### Limitations
+
+- External to internal references: The converter does not support scenarios where an external schema file references internal components of the OpenAPI document. In such cases, manual adjustment of the converted document may be necessary.
+
+
 ## Development
 
 1. Setup project by installing dependencies `npm install`

@@ -11,7 +11,7 @@ export const converters: Record<string, ConvertOpenAPIFunction > = {
  * @param {ConvertOptions} options - Conversion options.
  * @returns {AsyncAPIDocument} The converted AsyncAPI document.
  */
-function from_openapi_to_asyncapi(openapi: OpenAPIDocument, options: OpenAPIToAsyncAPIOptions = {}): AsyncAPIDocument {
+export function from_openapi_to_asyncapi(openapi: OpenAPIDocument, options: OpenAPIToAsyncAPIOptions = {}): AsyncAPIDocument {
   const perspective = options.perspective || 'server';
   const asyncapi: Partial<AsyncAPIDocument> = {
       asyncapi: '3.0.0',
