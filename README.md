@@ -3,7 +3,7 @@
 Convert [AsyncAPI](https://asyncapi.com) documents older to newer versions and you can also convert OpenAPI documents to AsyncAPI documents.
 
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-9-orange.svg?style=flat-square)](#contributors-)
+[![All Contributors](https://img.shields.io/badge/all_contributors-10-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 <!-- toc is generated with GitHub Actions do not remove toc markers -->
@@ -314,6 +314,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
     <tr>
       <td align="center" valign="top" width="14.28%"><a href="https://www.arctype.co/"><img src="https://avatars.githubusercontent.com/u/549273?v=4?s=100" width="100px;" alt="Ryan R Sundberg"/><br /><sub><b>Ryan R Sundberg</b></sub></a><br /><a href="https://github.com/asyncapi/converter-js/commits?author=sundbry" title="Code">💻</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/ItshMoh"><img src="https://avatars.githubusercontent.com/u/121867882?v=4?s=100" width="100px;" alt="Mohan Kumar"/><br /><sub><b>Mohan Kumar</b></sub></a><br /><a href="https://github.com/asyncapi/converter-js/commits?author=ItshMoh" title="Code">💻</a> <a href="https://github.com/asyncapi/converter-js/commits?author=ItshMoh" title="Tests">⚠️</a> <a href="https://github.com/asyncapi/converter-js/commits?author=ItshMoh" title="Documentation">📖</a> <a href="#example-ItshMoh" title="Examples">💡</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Gmin2"><img src="https://avatars.githubusercontent.com/u/127925465?v=4?s=100" width="100px;" alt="Mintu Gogoi"/><br /><sub><b>Mintu Gogoi</b></sub></a><br /><a href="https://github.com/asyncapi/converter-js/commits?author=Gmin2" title="Code">💻</a> <a href="https://github.com/asyncapi/converter-js/commits?author=Gmin2" title="Documentation">📖</a> <a href="#example-Gmin2" title="Examples">💡</a> <a href="https://github.com/asyncapi/converter-js/commits?author=Gmin2" title="Tests">⚠️</a></td>
     </tr>
   </tbody>
 </table>
