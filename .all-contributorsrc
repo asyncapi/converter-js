@@ -110,6 +110,18 @@
         "doc",
         "example"
       ]
+    },
+    {
+      "login": "Gmin2",
+      "name": "Mintu Gogoi",
+      "avatar_url": "https://avatars.githubusercontent.com/u/127925465?v=4",
+      "profile": "https://github.com/Gmin2",
+      "contributions": [
+        "code",
+        "doc",
+        "example",
+        "test"
+      ]
     }
   ],
   "contributorsPerLine": 7,
