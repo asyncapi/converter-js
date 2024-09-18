@@ -42,7 +42,7 @@ export function convert(input: string | AsyncAPIDocument, version: AsyncAPIConve
 
   // add 1 to `fromVersion` because we convert from previous to next
   fromVersion++;
-  let converted = document;
+  let converted = document as AsyncAPIDocument;
   for (let i = fromVersion; i <= toVersion; i++) {
     const v = conversionVersions[i] as AsyncAPIConvertVersion;
     converted = asyncAPIconverters[v](converted, options);
