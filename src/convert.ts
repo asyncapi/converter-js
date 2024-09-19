@@ -26,10 +26,6 @@ export function convert(input: AsyncAPIDocument, version: AsyncAPIConvertVersion
 export function convert(input: string | AsyncAPIDocument, version: AsyncAPIConvertVersion , options: ConvertOptions= {}): string | AsyncAPIDocument {
   const { format, document } = serializeInput(input);
 
-  if ('openapi' in document) {
-    throw new Error('Cannot convert OpenAPI document. Use convertOpenAPI function instead.');
-  }
-
   const asyncapiVersion = document.asyncapi;
   let fromVersion = conversionVersions.indexOf(asyncapiVersion);
   const toVersion = conversionVersions.indexOf(version);
@@ -46,7 +42,7 @@ export function convert(input: string | AsyncAPIDocument, version: AsyncAPIConve
 
   // add 1 to `fromVersion` because we convert from previous to next
   fromVersion++;
-  let converted = document;
+  let converted = document as AsyncAPIDocument;
   for (let i = fromVersion; i <= toVersion; i++) {
     const v = conversionVersions[i] as AsyncAPIConvertVersion;
     converted = asyncAPIconverters[v](converted, options);
