@@ -3,12 +3,19 @@ import type { AsyncAPIDocument, ConvertOptions, ConvertV2ToV3Options, ConvertFun
 
 export const converters: Record<string, ConvertFunction> = {
   '3.0.0': from__2_6_0__to__3_0_0,
+  '3.1.0': from__3_0_0__to__3_1_0,
 }
 
 type RequiredConvertV2ToV3Options =  Required<ConvertV2ToV3Options>;
 type ConvertContext =  {
   refs: Map<string, string>;
 };
+
+function from__3_0_0__to__3_1_0(asyncapi: AsyncAPIDocument, options: ConvertOptions): AsyncAPIDocument {
+  // v3.1 only adds ROS bindings, so no only version bump is needed
+  asyncapi.asyncapi = '3.1.0';
+  return asyncapi;
+}
 
 function from__2_6_0__to__3_0_0(asyncapi: AsyncAPIDocument, options: ConvertOptions): AsyncAPIDocument {
   asyncapi.asyncapi = '3.0.0';
