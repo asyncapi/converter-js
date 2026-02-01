@@ -19,8 +19,6 @@ Convert [AsyncAPI](https://asyncapi.com) documents older to newer versions and y
 - [Known missing features](#known-missing-features)
 - [OpenAPI 3.0 to AsyncAPI 3.0 Conversion](#openapi-30-to-asyncapi-30-conversion)
     + [Limitations](#limitations)
-  * [Postman Collection to AsyncAPI conversion](#postman-collection-to-asyncapi-conversion)
-    + [Limitations](#limitations-1)
 - [Development](#development)
 - [Contribution](#contribution)
 - [Contributors ✨](#contributors-%E2%9C%A8)
@@ -240,48 +238,6 @@ The perspective option can be set to either 'server' (default) or 'client'.
 #### Limitations
 
 - External to internal references: The converter does not support scenarios where an external schema file references internal components of the OpenAPI document. In such cases, manual adjustment of the converted document may be necessary.
-
-### Postman Collection to AsyncAPI conversion
-
-The converter now also supports conversion from postman collection to AsyncAPI 3.0. This feature enables easy transition of existing postman collection to any AsyncAPI 3.0 documents.
-
-To use this new conversion feature:
-
-```js
-const fs = require('fs');
-const { convertPostman } = require('@asyncapi/converter')
-try {
-  const postman = fs.readFileSync('postman-collection.yml', 'utf-8')
-  const asyncapi = convertPostman(postman, '3.0.0');
-  console.log(asyncapi);
-} catch (e) {
-  console.error(e);
-}
-```
-
-When converting from postman collection to AsyncAPI you can now specify the perspective of the conversion using the `perspective` option. This allows you to choose whether the conversion should be from an application or client point of view
-
-```js
-const { convertPostman } = require('@asyncapi/converter')
-try {
-  const postman = fs.readFileSync('postman-collection.yml', 'utf-8')
-  const asyncapi = convertPostman(postman, '3.0.0', { perspective: 'client' });
-  console.log(asyncapi);
-} catch (e) {
-  console.error(e);
-}
-```
-
-The perspective option can be set to either 'server' (default) or 'client'. 
-
-- With `server` perspective: `action` becomes `receive`
-
-- With `client` perspective: `action` becomes `send`
-
-#### Limitations
-
-- External to internal references: The converter does not support scenarios where an external schema file references internal components of the OpenAPI document. In such cases, manual adjustment of the converted document may be necessary.
-
 
 ## Development
 

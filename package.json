@@ -40,8 +40,7 @@
 	"dependencies": {
 		"@asyncapi/parser": "^3.1.0",
 		"js-yaml": "^3.14.1",
-		"path": "^0.12.7",
-		"postman2openapi": "^1.2.1"
+		"path": "^0.12.7"
 	},
 	"devDependencies": {
 		"@jest/types": "^27.5.1",
