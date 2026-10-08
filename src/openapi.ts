@@ -63,7 +63,9 @@ interface LicenseObject {
 function convertInfoObject(info: InfoObject, openapi: OpenAPIDocument): AsyncAPIDocument['info'] {
   return sortObjectKeys({
       ...info,
-      tags: [openapi.tags],
+      tags: openapi.tags
+        ? (Array.isArray(openapi.tags) ? openapi.tags : [openapi.tags])
+        : undefined,
       externalDocs: openapi.externalDocs,
   }, [
       "title",
@@ -100,11 +102,12 @@ function convertServerObjects(servers: ServerVariableObject[], openapi: OpenAPID
   const security: Record<string, any> = openapi.security;
   servers.forEach((server: any) => {
     
-    const serverName = generateServerName(server.url);
     if (isRefObject(server)) {
-      newServers[serverName] = server;
+      const refServerName = server.$ref.split('/').pop() || 'server';
+      newServers[refServerName] = server;
       return;
     }
+    const serverName = generateServerName(server.url);
 
     const { host, pathname, protocol } = resolveServerUrl(server.url);
     server.host = host;
