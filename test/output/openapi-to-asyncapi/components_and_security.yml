@@ -59,28 +59,22 @@ operations:
 components:
   schemas:
     SecureResponse:
-      schemaFormat: application/vnd.oai.openapi;version=3.0.0
-      schema:
-        type: object
-        properties:
-          message:
-            type: string
+      type: object
+      properties:
+        message:
+          type: string
     OAuthResponse:
-      schemaFormat: application/vnd.oai.openapi;version=3.0.0
-      schema:
-        type: object
-        properties:
-          data:
-            type: string
+      type: object
+      properties:
+        data:
+          type: string
     Error:
-      schemaFormat: application/vnd.oai.openapi;version=3.0.0
-      schema:
-        type: object
-        properties:
-          code:
-            type: integer
-          message:
-            type: string
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
   securitySchemes:
     bearerAuth:
       type: http
