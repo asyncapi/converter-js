@@ -152,22 +152,28 @@ function generateServerName(url: string): string {
 function resolveServerUrl(url: string): {
   host: string;
   pathname?: string;
-  protocol: string;
+  protocol?: string;
 } {
+  // Issue 6 fix: when there is no "://" in the URL (e.g. "{apiRoot}/tmf-api/..."),
+  // the old code set protocol to the entire raw string. Now we leave protocol
+  // undefined so that asyncapi validate correctly flags it as missing (the user
+  // must supply the real broker protocol — http/amqp/kafka/etc. — by hand).
+  const hasScheme = url.includes("://");
   let [maybeProtocol, maybeHost] = url.split("://");
   if (!maybeHost) {
       maybeHost = maybeProtocol;
   }
+  const protocol = hasScheme ? maybeProtocol : undefined;
   const [host, ...pathnames] = maybeHost.split("/");
 
   if (pathnames.length) {
       return {
           host,
           pathname: `/${pathnames.join("/")}`,
-          protocol: maybeProtocol,
+          protocol,
       };
   }
-  return { host, pathname: undefined , protocol: maybeProtocol };
+  return { host, pathname: undefined, protocol };
 }
 
 /**
@@ -200,9 +206,20 @@ function convertPaths(paths: OpenAPIDocument['paths'], perspective: 'client' | '
           const operationObject = operation as any;
           const operationId = operationObject.operationId || `${method}${channelName}`;
 
+          // Issue 4 fix: notification-listener paths (e.g. /listener/alarmCreateEvent)
+          // represent callbacks that the document OWNER publishes to subscribers.
+          // A single global perspective flag cannot represent both roles at once, so
+          // we detect the TM Forum /listener/ convention and invert the action for
+          // those paths only, regardless of the global perspective setting.
+          const baseAction = perspective === 'client' ? 'send' : 'receive';
+          const isNotificationListenerPath = /^\/listener\//.test(path);
+          const operationAction = isNotificationListenerPath
+            ? (baseAction === 'send' ? 'receive' : 'send')
+            : baseAction;
+
           // Create operation
           operations[operationId] = {
-            action: perspective === 'client' ? 'send' : 'receive',
+            action: operationAction,
             channel: createRefObject('channels', channelName),
             summary: operationObject.summary,
             description: operationObject.description,
@@ -318,9 +335,9 @@ function convertParameter(param: any): any {
     description: param.description,
   };
 
-  if (param.required) {
-    convertedParam.required = param.required;
-  }
+  // Issue 5 fix: AsyncAPI's Parameter Object has no `required` keyword (unlike
+  // OpenAPI's), so it is intentionally not carried over here — doing so fails
+  // `asyncapi validate` with "Property required is not expected to be here".
 
   if (param.schema && !isRefObject(param.schema)) {
     if (param.schema.enum) {
@@ -453,12 +470,60 @@ function convertComponents(openapi: OpenAPIDocument): AsyncAPIDocument['componen
       };
     }
 
-    if (openapi.components.examples) {
-      asyncComponents.examples = openapi.components.examples;  
-    }
+    // Issue 5 fix: AsyncAPI's Components Object has no `examples` keyword (unlike
+    // OpenAPI's), so openapi.components.examples is intentionally dropped here
+    // rather than carried over — doing so fails `asyncapi validate` with
+    // "Property examples is not expected to be here".
   }
 
   return removeEmptyObjects(asyncComponents);
+}
+
+/**
+ * Issue 3 fix: converts OpenAPI's discriminator object form to AsyncAPI's string form.
+ * OpenAPI: discriminator: { propertyName: '@type', mapping: {...} }
+ * AsyncAPI: discriminator: '@type'   (plain string; no mapping keyword exists)
+ * Applied recursively so discriminators nested inside allOf/oneOf/anyOf/properties/items
+ * are all converted.
+ */
+function convertDiscriminator(schema: any): any {
+  if (!isPlainObject(schema)) {
+    return schema;
+  }
+  const converted: any = { ...schema };
+  if (isPlainObject(converted.discriminator) && typeof converted.discriminator.propertyName === 'string') {
+    converted.discriminator = converted.discriminator.propertyName;
+  }
+  for (const key of ['allOf', 'oneOf', 'anyOf']) {
+    if (Array.isArray(converted[key])) {
+      converted[key] = converted[key].map(convertDiscriminator);
+    }
+  }
+  if (converted.items) {
+    converted.items = convertDiscriminator(converted.items);
+  }
+  if (isPlainObject(converted.properties)) {
+    const properties: Record<string, any> = {};
+    for (const [propName, propSchema] of Object.entries(converted.properties)) {
+      properties[propName] = convertDiscriminator(propSchema);
+    }
+    converted.properties = properties;
+  }
+  return converted;
+}
+
+/**
+ * Issue 2 fix: converts a single schema for use under components.schemas.
+ * AsyncAPI's Components Object expects plain JSON Schema here — NOT the
+ * Multi Format Schema Object wrapper ({ schemaFormat, schema }) that
+ * convertSchema() produces. That wrapper is only valid at message payload
+ * sites referencing a foreign-format schema.
+ */
+function convertComponentSchema(schema: any): any {
+  if (isRefObject(schema)) {
+    return schema;
+  }
+  return convertDiscriminator(schema);
 }
 
 /**
@@ -487,6 +552,8 @@ function convertSchema(schema: any): any {
 
 /**
  * Converts OpenAPI Schema Objects to AsyncAPI Schema Objects.
+ * Uses convertComponentSchema (not convertSchema) so that reusable definitions
+ * are emitted as plain JSON Schema — not wrapped in a Multi Format Schema Object.
  * @param {Record<string, any>} schemas - The OpenAPI Schema Objects to convert.
  * @returns {Record<string, any>} The converted AsyncAPI Schema Objects.
  */
@@ -494,7 +561,9 @@ function convertSchemas(schemas: Record<string, any>): Record<string, any> {
   const convertedSchemas: Record<string, any> = {};
 
   for (const [name, schema] of Object.entries(schemas)) {
-    convertedSchemas[name] = convertSchema(schema);
+    // Issue 2 fix: use convertComponentSchema, not convertSchema, so schemas
+    // under components.schemas are NOT wrapped in { schemaFormat, schema }.
+    convertedSchemas[name] = convertComponentSchema(schema);
   }
 
   return convertedSchemas;

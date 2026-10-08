@@ -171,22 +171,18 @@ operations:
 components:
   schemas:
     User:
-      schemaFormat: application/vnd.oai.openapi;version=3.0.0
-      schema:
-        type: object
-        properties:
-          id:
-            type: string
-          name:
-            type: string
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
     Post:
-      schemaFormat: application/vnd.oai.openapi;version=3.0.0
-      schema:
-        type: object
-        properties:
-          id:
-            type: string
-          title:
-            type: string
-          content:
-            type: string
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        content:
+          type: string
