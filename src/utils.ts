@@ -2,51 +2,70 @@ import { load } from 'js-yaml';
 
 import type { AsyncAPIDocument, OpenAPIDocument } from "./interfaces";
 
+const EMPTY_OR_INVALID_INPUT = 'Input document is empty or invalid.';
+const INVALID_JSON_YAML = 'AsyncAPI document must be a valid JSON or YAML document.';
+
+function assertDocumentObject(document: unknown): asserts document is AsyncAPIDocument | OpenAPIDocument {
+  // typeof null === 'object' in JS; YAML `null` / empty docs also yield null/undefined from js-yaml.
+  if (document === null || document === undefined || typeof document !== 'object' || Array.isArray(document)) {
+    throw new Error(EMPTY_OR_INVALID_INPUT);
+  }
+}
+
 export function serializeInput(document: string | AsyncAPIDocument | OpenAPIDocument | Record<string,any>): { format: 'json' | 'yaml', document: AsyncAPIDocument | OpenAPIDocument } | never {
   let triedConvertToYaml = false;
   try {
     if (typeof document === 'object') {
+      assertDocumentObject(document);
       return {
         format: 'json',
         document: JSON.parse(JSON.stringify(document)), // copy object
       };
     }
 
+    if (typeof document === 'string' && document.trim() === '') {
+      throw new Error(EMPTY_OR_INVALID_INPUT);
+    }
+
     const maybeJSON = JSON.parse(document);
     if (typeof maybeJSON === 'object') {
-      if ('openapi' in maybeJSON) {
-        return {
-          format: 'json',
-          document: maybeJSON,
-        };
-      } else {
-        return {
-          format: 'json',
-          document: maybeJSON,
-        };
-      }
+      assertDocumentObject(maybeJSON);
+      return {
+        format: 'json',
+        document: maybeJSON,
+      };
     }
 
     triedConvertToYaml = true; // NOSONAR
     // if `maybeJSON` is object, then we have 100% sure that we operate on JSON, 
     // but if it's `string` then we have option that it can be YAML but it doesn't have to be
+    const yamlDoc = load(document) as AsyncAPIDocument | OpenAPIDocument;
+    assertDocumentObject(yamlDoc);
     return {
       format: 'yaml',
-      document: load(document) as AsyncAPIDocument | OpenAPIDocument,
+      document: yamlDoc,
     };
   } catch (e) {
+    if (e instanceof Error && e.message === EMPTY_OR_INVALID_INPUT) {
+      throw e;
+    }
     try {
       if (triedConvertToYaml) {
         throw e;
       }
 
       // try to parse (again) YAML, because the text itself may not have a JSON representation and cannot be represented as a JSON object/string
+      const yamlDoc = load(document as string) as AsyncAPIDocument | OpenAPIDocument;
+      assertDocumentObject(yamlDoc);
       return {
         format: 'yaml',
-        document: load(document as string) as AsyncAPIDocument | OpenAPIDocument,
+        document: yamlDoc,
       };
     } catch (err) {
-      throw new Error('AsyncAPI document must be a valid JSON or YAML document.');
+      if (err instanceof Error && err.message === EMPTY_OR_INVALID_INPUT) {
+        throw err;
+      }
+      throw new Error(INVALID_JSON_YAML);
     }
   }
 }

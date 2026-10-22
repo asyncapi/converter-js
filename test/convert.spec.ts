@@ -16,6 +16,14 @@ describe('convert()', () => {
     expect(() => convert(`asyncapi: '2.0.0'`, '2.0.0')).toThrow('Cannot convert to the same version.');
   });
 
+  it('should throw a clear error for an empty string input', () => {
+    expect(() => convert('', '2.1.0')).toThrow('Input document is empty or invalid.');
+  });
+
+  it('should throw a clear error for a null document string', () => {
+    expect(() => convert('null', '2.1.0')).toThrow('Input document is empty or invalid.');
+  });
+
   it('should convert from 2.0.0 to 2.1.0 (JSON case)', () => {
     const input = fs.readFileSync(path.resolve(__dirname, 'input', '2.0.0', 'streetlights.json'), 'utf8');
     let output = fs.readFileSync(path.resolve(__dirname, 'output', '2.1.0', 'streetlights.json'), 'utf8');
