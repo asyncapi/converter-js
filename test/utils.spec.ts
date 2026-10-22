@@ -47,6 +47,15 @@ describe('utils', () => {
       // js-yaml load('null') === null
       expect(() => serializeInput('null\n')).toThrow('Input document is empty or invalid.');
     });
+
+    it('should throw a clear error for YAML null written as ~', () => {
+      expect(() => serializeInput('~')).toThrow('Input document is empty or invalid.');
+    });
+
+    it('should throw a clear error for a document that is not an object', () => {
+      expect(() => serializeInput('[]')).toThrow('Input document is empty or invalid.');
+      expect(() => serializeInput(null as any)).toThrow('Input document is empty or invalid.');
+    });
   });
 
   describe('objectToSchema()', () => {
