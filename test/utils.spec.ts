@@ -30,6 +30,32 @@ describe('utils', () => {
       const input = '%{foo: bar}';
       expect(() => serializeInput(input)).toThrow('AsyncAPI document must be a valid JSON or YAML document.');
     });
+
+    it('should throw a clear error for an empty string', () => {
+      expect(() => serializeInput('')).toThrow('Input document is empty or invalid.');
+    });
+
+    it('should throw a clear error for whitespace-only input', () => {
+      expect(() => serializeInput('   \n\t  ')).toThrow('Input document is empty or invalid.');
+    });
+
+    it('should throw a clear error for JSON null', () => {
+      expect(() => serializeInput('null')).toThrow('Input document is empty or invalid.');
+    });
+
+    it('should throw a clear error for YAML null', () => {
+      // js-yaml load('null') === null
+      expect(() => serializeInput('null\n')).toThrow('Input document is empty or invalid.');
+    });
+
+    it('should throw a clear error for YAML null written as ~', () => {
+      expect(() => serializeInput('~')).toThrow('Input document is empty or invalid.');
+    });
+
+    it('should throw a clear error for a document that is not an object', () => {
+      expect(() => serializeInput('[]')).toThrow('Input document is empty or invalid.');
+      expect(() => serializeInput(null as any)).toThrow('Input document is empty or invalid.');
+    });
   });
 
   describe('objectToSchema()', () => {

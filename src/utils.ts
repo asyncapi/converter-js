@@ -2,7 +2,22 @@ import { load } from 'js-yaml';
 
 import type { AsyncAPIDocument, OpenAPIDocument } from "./interfaces";
 
+const EMPTY_OR_INVALID_INPUT = 'Input document is empty or invalid.';
+
 export function serializeInput(document: string | AsyncAPIDocument | OpenAPIDocument | Record<string,any>): { format: 'json' | 'yaml', document: AsyncAPIDocument | OpenAPIDocument } | never {
+  if (typeof document === 'string' && document.trim() === '') {
+    throw new Error(EMPTY_OR_INVALID_INPUT);
+  }
+  const serialized = parseInput(document);
+  // empty or `null` JSON/YAML parses to null/undefined (and typeof null === 'object')
+  const parsed: unknown = serialized.document;
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error(EMPTY_OR_INVALID_INPUT);
+  }
+  return serialized;
+}
+
+function parseInput(document: string | AsyncAPIDocument | OpenAPIDocument | Record<string,any>): { format: 'json' | 'yaml', document: AsyncAPIDocument | OpenAPIDocument } | never {
   let triedConvertToYaml = false;
   try {
     if (typeof document === 'object') {
