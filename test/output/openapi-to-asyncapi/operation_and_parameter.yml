@@ -146,22 +146,18 @@ operations:
 components:
   schemas:
     Item:
-      schemaFormat: application/vnd.oai.openapi;version=3.0.0
-      schema:
-        type: object
-        properties:
-          id:
-            type: string
-          name:
-            type: string
-          description:
-            type: string
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
     ItemInput:
-      schemaFormat: application/vnd.oai.openapi;version=3.0.0
-      schema:
-        type: object
-        properties:
-          name:
-            type: string
-          description:
-            type: string
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
