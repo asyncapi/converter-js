@@ -1,6 +1,6 @@
 # AsyncAPI Converter
 
-Convert [AsyncAPI](https://asyncapi.com) documents older to newer versions and you can also convert OpenAPI documents to AsyncAPI documents.
+Convert [AsyncAPI](https://asyncapi.com) documents from older to newer versions and you can also convert OpenAPI documents to AsyncAPI documents.
 
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
 [![All Contributors](https://img.shields.io/badge/all_contributors-10-orange.svg?style=flat-square)](#contributors-)
@@ -96,7 +96,7 @@ try {
 
 ## Conversion 2.x.x to 3.x.x
 
-> **NOTE**: This feature is still WIP, and is until the final release of `3.0.0`.
+
 
 Conversion to version `3.x.x` from `2.x.x` has several assumptions that should be known before converting:
 
