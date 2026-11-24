@@ -59,12 +59,17 @@ export function convertOpenAPI(input: string | OpenAPIDocument, version: OpenAPI
 
   const { format, document } = serializeInput(input);
   const openApiVersion = document.openapi;
-  const converterVersion = openApiVersion;
+
+  // Issue 7 fix: OpenAPI patch releases (3.0.1, 3.0.2, 3.0.3) introduce no
+  // keyword changes relevant to this conversion, so normalise any 3.0.x version
+  // to the single converter key '3.0.0'. Real-world specs (e.g. TMF642's
+  // "openapi: 3.0.1") would otherwise be rejected before conversion even starts.
+  const converterVersion = /^3\.0\.\d+$/.test(openApiVersion) ? '3.0.0' : openApiVersion;
 
   const openapiToAsyncapiConverter = openapiConverters[converterVersion as OpenAPIConvertVersion] as ConvertOpenAPIFunction;
 
   if (!openapiToAsyncapiConverter) {
-    throw new Error(`We are not able to convert OpenAPI ${converterVersion} to AsyncAPI, please raise a feature request.`);
+    throw new Error(`We are not able to convert OpenAPI ${openApiVersion} to AsyncAPI, please raise a feature request.`);
   }
 
   const convertedAsyncAPI = openapiToAsyncapiConverter(document as OpenAPIDocument, options);
